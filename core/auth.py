@@ -18,7 +18,10 @@ class AuthManager:
         default_users = [
             ("admin", "admin123", "Admin"),
             ("hr_manager", "hr123", "HR Manager"),
-            ("employee", "emp123", "Employee")
+            ("employee", "emp123", "Employee"),
+            ("demo_employee", "demo123", "Employee"),
+            ("demo_hr", "demo123", "HR Manager"),
+            ("demo_admin", "demo123", "Admin")
         ]
         
         for username, password, role in default_users:
