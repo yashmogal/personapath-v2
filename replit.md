@@ -13,19 +13,21 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend Architecture
-- **Framework**: Streamlit-based web application with multi-page navigation
+- **Framework**: Streamlit-based web application with multi-page navigation served at `/app` route
 - **UI Structure**: Role-based dashboards (Employee, HR Manager, Admin) with tabbed interfaces
 - **Session Management**: Streamlit session state for authentication and user context
 - **Styling**: Custom CSS with gradient headers and responsive design
-- **API Integration**: FastAPI backend integration with testing interface in Admin dashboard
+- **API Integration**: Unified FastAPI backend integration with testing interface in Admin dashboard
+- **Unified Port**: Both frontend and backend services run on port 5000 with API routes under `/api` prefix
 
 ### Backend Architecture
+- **Unified Application**: Single Python application serving both Streamlit frontend and FastAPI backend on port 5000
 - **Core Modules**: Modular Python architecture with separate managers for authentication, database operations, document processing, and AI features
-- **API Layer**: FastAPI REST API running on port 8000 with comprehensive endpoints for all core functionality
+- **API Layer**: FastAPI REST API mounted under `/api` prefix with comprehensive endpoints for all core functionality
 - **Authentication**: Simple hash-based authentication system using SHA-256 with role-based access control
 - **Document Processing**: Multi-format file processor supporting PDF, DOCX, and TXT files with text extraction capabilities
 - **AI Pipeline**: RAG (Retrieval-Augmented Generation) system using LangChain for document processing and embeddings
-- **API Documentation**: Auto-generated Swagger UI (/docs) and ReDoc (/redoc) documentation interfaces
+- **API Documentation**: Auto-generated Swagger UI (/api/docs) and ReDoc (/api/redoc) documentation interfaces
 
 ### Data Storage
 - **Database**: SQLite for lightweight, file-based data persistence
