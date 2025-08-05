@@ -19,7 +19,9 @@ from core.mentor_system import MentorSystem
 app = FastAPI(
     title="PersonaPath API",
     description="Personalized Internal Career Intelligence & Mentorship Assistant API",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 # Add CORS middleware
@@ -403,6 +405,4 @@ async def startup_event():
     except Exception as e:
         print(f"Error loading job roles on startup: {e}")
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# Removed standalone server code - now handled by main.py
