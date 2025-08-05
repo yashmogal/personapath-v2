@@ -255,7 +255,7 @@ class AdminDashboard:
                     df.drop('ID', axis=1),
                     use_container_width=True,
                     on_select="rerun",
-                    selection_mode="multi-index"
+                    selection_mode="multi-row"
                 )
                 
                 # Bulk actions

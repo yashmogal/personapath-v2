@@ -1,12 +1,20 @@
 import os
 import json
 from typing import List, Dict, Optional
-from langchain_community.embeddings import OpenAIEmbeddings
+try:
+    from langchain_community.embeddings import HuggingFaceEmbeddings
+    HUGGINGFACE_AVAILABLE = True
+except ImportError:
+    HUGGINGFACE_AVAILABLE = False
+    from .simple_embeddings import SimpleEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.memory import ConversationBufferMemory
 from langchain.schema import Document
-from langchain_community.llms import OpenAI
+try:
+    from langchain_openai import ChatOpenAI
+except ImportError:
+    from langchain_community.llms import OpenAI as ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
 import streamlit as st
 
@@ -28,19 +36,56 @@ class RAGPipeline:
     def _initialize_components(self):
         """Initialize LLM and embeddings"""
         try:
-            # Get API key from environment or use default for testing
-            api_key = os.getenv("OPENAI_API_KEY", "demo-key-replace-with-real")
-            
-            # Initialize embeddings - using OpenAI as specified in PRD
-            if api_key != "demo-key-replace-with-real":
-                self.embeddings = OpenAIEmbeddings(openai_api_key=api_key)
-                self.llm = OpenAI(openai_api_key=api_key, temperature=0.7)
+            # Initialize free embeddings model (all-MiniLM-L6-v2)
+            if HUGGINGFACE_AVAILABLE:
+                try:
+                    self.embeddings = HuggingFaceEmbeddings(
+                        model_name="sentence-transformers/all-MiniLM-L6-v2",
+                        model_kwargs={'device': 'cpu'},
+                        encode_kwargs={'normalize_embeddings': True}
+                    )
+                    st.info("✅ Using HuggingFace embeddings (all-MiniLM-L6-v2)")
+                except Exception:
+                    # Fallback to simple embeddings
+                    self.embeddings = SimpleEmbeddings()
+                    st.info("✅ Using simple embeddings (fallback)")
             else:
-                # For demo purposes, create mock components
-                st.warning("⚠️ OpenAI API key not configured. Using demo mode.")
+                self.embeddings = SimpleEmbeddings()
+                st.info("✅ Using simple embeddings (sentence-transformers not available)")
+            
+            # Get OpenRouter API key from environment
+            openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+            openrouter_model = os.getenv("OPENROUTER_MODEL", "qwen/qwen-2.5-72b-instruct")
+            
+            if openrouter_api_key:
+                # Initialize LLM with OpenRouter
+                self.llm = ChatOpenAI(
+                    model=openrouter_model,
+                    openai_api_key=openrouter_api_key,
+                    openai_api_base="https://openrouter.ai/api/v1",
+                    temperature=0.7,
+                    max_tokens=1000
+                )
+                st.success("✅ RAG system initialized with HuggingFace embeddings and OpenRouter LLM")
+            else:
+                st.warning("⚠️ OpenRouter API key not configured. Chat functionality will use fallback responses.")
                 
         except Exception as e:
             st.error(f"Error initializing RAG components: {e}")
+            # Fallback to basic setup
+            try:
+                if HUGGINGFACE_AVAILABLE:
+                    self.embeddings = HuggingFaceEmbeddings(
+                        model_name="sentence-transformers/all-MiniLM-L6-v2"
+                    )
+                    st.info("✅ Embeddings initialized successfully, LLM in demo mode")
+                else:
+                    self.embeddings = SimpleEmbeddings()
+                    st.info("✅ Simple embeddings initialized, LLM in demo mode")
+            except Exception as e2:
+                st.error(f"Failed to initialize embeddings: {e2}")
+                self.embeddings = SimpleEmbeddings()
+                st.info("✅ Using basic fallback embeddings")
     
     def process_documents(self, documents: List[Dict]) -> bool:
         """Process and embed job role documents"""
