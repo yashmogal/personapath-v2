@@ -3,6 +3,7 @@ from core.rag_pipeline import RAGPipeline
 from core.skill_analyzer import SkillAnalyzer
 from core.career_planner import CareerPlanner
 from core.mentor_system import MentorSystem
+from styles import create_card, create_metric_card, create_progress_bar
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -18,10 +19,37 @@ class EmployeeDashboard:
         self.mentor_system = MentorSystem(db_manager)
     
     def render(self):
-        """Render employee dashboard"""
-        st.title("🎯 Employee Dashboard")
+        """Render modern employee dashboard"""
+        # Dashboard header with welcome message
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    padding: 2rem; border-radius: 16px; margin-bottom: 2rem; color: white;">
+            <h1 style="margin: 0 0 0.5rem 0; font-weight: 700;">
+                🎯 Welcome to Your Career Hub
+            </h1>
+            <p style="margin: 0; opacity: 0.9; font-size: 1.1rem;">
+                Explore opportunities, analyze skills, and plan your career journey
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Navigation tabs
+        # Quick stats overview
+        col1, col2, col3, col4 = st.columns(4)
+        
+        # Get user statistics (placeholder for demo)
+        with col1:
+            st.markdown(create_metric_card("12", "Career Chats", "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"), unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown(create_metric_card("5", "Skills Analyzed", "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"), unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown(create_metric_card("3", "Career Paths", "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"), unsafe_allow_html=True)
+        
+        with col4:
+            st.markdown(create_metric_card("8", "Mentors Available", "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)"), unsafe_allow_html=True)
+        
+        # Navigation tabs with modern styling
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "💬 Chat Assistant", 
             "🔍 Role Explorer", 
@@ -46,23 +74,28 @@ class EmployeeDashboard:
             self._render_mentor_finder()
     
     def _render_chat_interface(self):
-        """Render chat interface for Q&A"""
-        st.header("💬 Career Assistant Chat")
-        st.write("Ask questions about job roles, career paths, or skill requirements.")
+        """Render modern chat interface for Q&A"""
+        # Chat interface header
+        st.markdown("""
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h2 style="color: #1f2937; margin: 0 0 0.5rem 0;">💬 AI Career Assistant</h2>
+            <p style="color: #6b7280; margin: 0;">Get personalized answers about job roles, career paths, and skill requirements</p>
+        </div>
+        """, unsafe_allow_html=True)
         
         # Initialize chat history in session state
         if 'chat_messages' not in st.session_state:
             st.session_state.chat_messages = []
         
-        # Chat history management buttons
+        # Modern chat controls
         col1, col2, col3 = st.columns([1, 1, 2])
         with col1:
-            if st.button("🗑️ Clear Chat", help="Clear current conversation"):
+            if st.button("🗑️ Clear Chat", help="Clear current conversation", use_container_width=True):
                 st.session_state.chat_messages = []
                 st.rerun()
         
         with col2:
-            if st.button("💾 Save Chat", help="Save to chat history"):
+            if st.button("💾 Save Chat", help="Save to chat history", use_container_width=True):
                 if st.session_state.chat_messages:
                     # Save current conversation to database
                     conversation = "\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_messages])
@@ -71,7 +104,7 @@ class EmployeeDashboard:
                         query="Full Conversation",
                         response=conversation
                     )
-                    st.success("Chat saved to history!")
+                    st.success("✅ Chat saved to history!")
         
         # Chat messages container with fixed height
         chat_container = st.container(height=400)
@@ -105,36 +138,33 @@ class EmployeeDashboard:
             st.session_state.chat_messages.append({"role": "assistant", "content": response})
             st.rerun()
         
-        # Suggested questions
-        st.subheader("💡 Suggested Questions")
+        # Modern suggested questions section
+        st.markdown("---")
+        st.markdown("""
+        <div style="margin: 2rem 0;">
+            <h3 style="color: #1f2937; margin-bottom: 1rem;">💡 Popular Questions</h3>
+            <p style="color: #6b7280; margin: 0;">Click on any question to start a conversation</p>
+        </div>
+        """, unsafe_allow_html=True)
         
         col1, col2 = st.columns(2)
         
-        with col1:
-            if st.button("What's the difference between Data Engineer and Data Analyst?"):
-                st.session_state.chat_messages.append({
-                    "role": "user", 
-                    "content": "What's the difference between Data Engineer and Data Analyst?"
-                })
-                response = self.rag_pipeline.query_documents(
-                    "What's the difference between Data Engineer and Data Analyst?",
-                    st.session_state.user_id
-                )
-                st.session_state.chat_messages.append({"role": "assistant", "content": response})
-                st.rerun()
+        suggested_questions = [
+            "What's the difference between Data Engineer and Data Analyst?",
+            "How can I move from my current role to Product Management?",
+            "What skills do I need for a Senior Software Engineer role?",
+            "How to transition into AI/ML engineering?"
+        ]
         
-        with col2:
-            if st.button("How can I move from my current role to Product Management?"):
-                st.session_state.chat_messages.append({
-                    "role": "user", 
-                    "content": "How can I move from my current role to Product Management?"
-                })
-                response = self.rag_pipeline.query_documents(
-                    "How can I move from my current role to Product Management?",
-                    st.session_state.user_id
-                )
-                st.session_state.chat_messages.append({"role": "assistant", "content": response})
-                st.rerun()
+        for i, question in enumerate(suggested_questions):
+            col = col1 if i % 2 == 0 else col2
+            with col:
+                if st.button(f"💭 {question}", key=f"suggested_{i}", use_container_width=True):
+                    st.session_state.chat_messages.append({"role": "user", "content": question})
+                    with st.spinner("Getting answer..."):
+                        response = self.rag_pipeline.query_documents(question, st.session_state.user_id)
+                    st.session_state.chat_messages.append({"role": "assistant", "content": response})
+                    st.rerun()
         
         # Chat history section with better management
         st.divider()
@@ -272,12 +302,21 @@ class EmployeeDashboard:
             st.info(f"No {category} roles found.")
     
     def _render_skill_analysis(self):
-        """Render skill gap analysis interface"""
-        st.header("📊 Skill Gap Analysis")
-        st.write("Analyze your skills against target roles and get personalized recommendations.")
+        """Render modern skill gap analysis interface"""
+        # Modern header
+        st.markdown("""
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h2 style="color: #1f2937; margin: 0 0 0.5rem 0;">📊 Skill Gap Analysis</h2>
+            <p style="color: #6b7280; margin: 0;">Discover what skills you need to reach your career goals</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Current skills input
-        st.subheader("🎯 Your Current Skills")
+        # Current skills input with modern styling
+        st.markdown("""
+        <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 2rem;">
+            <h3 style="color: #1f2937; margin: 0 0 1rem 0;">🎯 Your Current Skills</h3>
+        </div>
+        """, unsafe_allow_html=True)
         
         col1, col2 = st.columns(2)
         
