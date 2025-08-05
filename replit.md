@@ -17,12 +17,15 @@ Preferred communication style: Simple, everyday language.
 - **UI Structure**: Role-based dashboards (Employee, HR Manager, Admin) with tabbed interfaces
 - **Session Management**: Streamlit session state for authentication and user context
 - **Styling**: Custom CSS with gradient headers and responsive design
+- **API Integration**: FastAPI backend integration with testing interface in Admin dashboard
 
 ### Backend Architecture
 - **Core Modules**: Modular Python architecture with separate managers for authentication, database operations, document processing, and AI features
+- **API Layer**: FastAPI REST API running on port 8000 with comprehensive endpoints for all core functionality
 - **Authentication**: Simple hash-based authentication system using SHA-256 with role-based access control
 - **Document Processing**: Multi-format file processor supporting PDF, DOCX, and TXT files with text extraction capabilities
 - **AI Pipeline**: RAG (Retrieval-Augmented Generation) system using LangChain for document processing and embeddings
+- **API Documentation**: Auto-generated Swagger UI (/docs) and ReDoc (/redoc) documentation interfaces
 
 ### Data Storage
 - **Database**: SQLite for lightweight, file-based data persistence

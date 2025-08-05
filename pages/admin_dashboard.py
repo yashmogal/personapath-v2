@@ -17,12 +17,13 @@ class AdminDashboard:
         st.title("🔧 Admin Dashboard")
         
         # Navigation tabs
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
             "📊 System Overview", 
             "👥 User Management", 
             "📋 Content Management",
             "📈 Advanced Analytics", 
-            "⚙️ System Settings"
+            "⚙️ System Settings",
+            "🚀 API Integration"
         ])
         
         with tab1:
@@ -39,6 +40,9 @@ class AdminDashboard:
         
         with tab5:
             self._render_system_settings()
+        
+        with tab6:
+            self._render_api_integration()
     
     def _render_system_overview(self):
         """Render system overview with key metrics"""
@@ -819,7 +823,231 @@ class AdminDashboard:
     def _clean_system_cache(self):
         """Clean system cache"""
         # Mock implementation
-        pass
+        
+    def _render_api_integration(self):
+        """Render API integration and testing interface"""
+        st.header("🚀 FastAPI Integration")
+        st.write("Test and manage the PersonaPath FastAPI endpoints.")
+        
+        # API Documentation section
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            st.subheader("📚 API Documentation")
+            st.write("The FastAPI server is running on port 8000 with the following endpoints:")
+            
+            api_endpoints = {
+                "Health & Status": [
+                    {"method": "GET", "endpoint": "/", "description": "Root endpoint with API info"},
+                    {"method": "GET", "endpoint": "/health", "description": "Health check endpoint"},
+                ],
+                "Authentication": [
+                    {"method": "POST", "endpoint": "/auth/login", "description": "User authentication"},
+                    {"method": "POST", "endpoint": "/auth/register", "description": "User registration"},
+                ],
+                "Job Roles": [
+                    {"method": "GET", "endpoint": "/jobs", "description": "Get all job roles"},
+                    {"method": "GET", "endpoint": "/jobs/search/{query}", "description": "Search job roles"},
+                    {"method": "POST", "endpoint": "/jobs", "description": "Create new job role"},
+                ],
+                "AI Chat": [
+                    {"method": "POST", "endpoint": "/chat", "description": "Chat with AI assistant"},
+                    {"method": "POST", "endpoint": "/chat/reset", "description": "Reset chat memory"},
+                ],
+                "Skills & Career": [
+                    {"method": "POST", "endpoint": "/skills/analyze", "description": "Analyze skill gaps"},
+                    {"method": "GET", "endpoint": "/skills/categories", "description": "Get skill categories"},
+                    {"method": "GET", "endpoint": "/career/paths", "description": "Get career paths"},
+                    {"method": "GET", "endpoint": "/career/paths/{path_name}", "description": "Get specific career path"},
+                ],
+                "Mentors & Analytics": [
+                    {"method": "GET", "endpoint": "/mentors", "description": "Get all mentors"},
+                    {"method": "POST", "endpoint": "/mentors/recommend", "description": "Get mentor recommendations"},
+                    {"method": "GET", "endpoint": "/analytics/summary", "description": "Get analytics summary"},
+                    {"method": "GET", "endpoint": "/chat/history/{user_id}", "description": "Get chat history"},
+                ]
+            }
+            
+            for category, endpoints in api_endpoints.items():
+                with st.expander(f"📂 {category}"):
+                    for endpoint in endpoints:
+                        method_color = "🟢" if endpoint["method"] == "GET" else "🔵"
+                        st.markdown(f"""
+                        {method_color} **{endpoint['method']}** `{endpoint['endpoint']}`  
+                        {endpoint['description']}
+                        """)
+        
+        with col2:
+            st.subheader("🔗 Quick Access")
+            
+            # FastAPI Documentation links
+            st.markdown("""
+            **📖 Interactive Documentation:**
+            """)
+            
+            col_docs1, col_docs2 = st.columns(2)
+            
+            with col_docs1:
+                st.markdown("""
+                <a href="http://localhost:8000/docs" target="_blank" 
+                   style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                          color: white; text-decoration: none; border-radius: 8px; font-weight: 600; text-align: center; width: 100%;">
+                    📚 Swagger UI
+                </a>
+                """, unsafe_allow_html=True)
+            
+            with col_docs2:
+                st.markdown("""
+                <a href="http://localhost:8000/redoc" target="_blank"
+                   style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
+                          color: white; text-decoration: none; border-radius: 8px; font-weight: 600; text-align: center; width: 100%;">
+                    📖 ReDoc
+                </a>
+                """, unsafe_allow_html=True)
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # Server Status
+            st.subheader("⚡ Server Status")
+            
+            import requests
+            
+            try:
+                response = requests.get("http://localhost:8000/health", timeout=5)
+                if response.status_code == 200:
+                    st.success("✅ FastAPI Server is running")
+                    health_data = response.json()
+                    st.json(health_data)
+                else:
+                    st.error(f"❌ Server responded with status {response.status_code}")
+            except requests.exceptions.ConnectionError:
+                st.error("❌ Cannot connect to FastAPI server on port 8000")
+            except requests.exceptions.Timeout:
+                st.warning("⚠️ Server request timed out")
+            except Exception as e:
+                st.error(f"❌ Error checking server status: {e}")
+        
+        # API Testing Section
+        st.markdown("---")
+        st.subheader("🧪 API Testing")
+        
+        # Test different endpoints
+        test_tab1, test_tab2, test_tab3, test_tab4 = st.tabs([
+            "📊 Basic Tests", 
+            "💬 Chat Test", 
+            "👥 Jobs Test",
+            "🔍 Skills Test"
+        ])
+        
+        with test_tab1:
+            st.write("**Test basic API endpoints:**")
+            
+            if st.button("Test Health Endpoint", key="test_health"):
+                try:
+                    response = requests.get("http://localhost:8000/health")
+                    st.success(f"✅ Status: {response.status_code}")
+                    st.json(response.json())
+                except Exception as e:
+                    st.error(f"❌ Error: {e}")
+            
+            if st.button("Test Root Endpoint", key="test_root"):
+                try:
+                    response = requests.get("http://localhost:8000/")
+                    st.success(f"✅ Status: {response.status_code}")
+                    st.json(response.json())
+                except Exception as e:
+                    st.error(f"❌ Error: {e}")
+        
+        with test_tab2:
+            st.write("**Test chat functionality:**")
+            
+            chat_message = st.text_input("Enter a message to test:")
+            if st.button("Send Chat Message", key="test_chat") and chat_message:
+                try:
+                    response = requests.post(
+                        "http://localhost:8000/chat",
+                        json={"message": chat_message}
+                    )
+                    if response.status_code == 200:
+                        st.success("✅ Chat API working")
+                        data = response.json()
+                        st.write("**Response:**")
+                        st.write(data.get('response', 'No response'))
+                    else:
+                        st.error(f"❌ Error: {response.status_code}")
+                        st.text(response.text)
+                except Exception as e:
+                    st.error(f"❌ Error: {e}")
+        
+        with test_tab3:
+            st.write("**Test job endpoints:**")
+            
+            if st.button("Get All Jobs", key="test_jobs"):
+                try:
+                    response = requests.get("http://localhost:8000/jobs")
+                    if response.status_code == 200:
+                        st.success("✅ Jobs API working")
+                        data = response.json()
+                        st.write(f"Found {len(data.get('jobs', []))} job roles")
+                        if data.get('jobs'):
+                            st.json(data['jobs'][:3])  # Show first 3 jobs
+                    else:
+                        st.error(f"❌ Error: {response.status_code}")
+                except Exception as e:
+                    st.error(f"❌ Error: {e}")
+        
+        with test_tab4:
+            st.write("**Test skills and career endpoints:**")
+            
+            col_skill1, col_skill2 = st.columns(2)
+            
+            with col_skill1:
+                if st.button("Get Skill Categories", key="test_skills"):
+                    try:
+                        response = requests.get("http://localhost:8000/skills/categories")
+                        if response.status_code == 200:
+                            st.success("✅ Skills API working")
+                            data = response.json()
+                            st.json(data['categories'])
+                        else:
+                            st.error(f"❌ Error: {response.status_code}")
+                    except Exception as e:
+                        st.error(f"❌ Error: {e}")
+            
+            with col_skill2:
+                if st.button("Get Career Paths", key="test_career"):
+                    try:
+                        response = requests.get("http://localhost:8000/career/paths")
+                        if response.status_code == 200:
+                            st.success("✅ Career Paths API working")
+                            data = response.json()
+                            st.json(list(data['career_paths'].keys()))
+                        else:
+                            st.error(f"❌ Error: {response.status_code}")
+                    except Exception as e:
+                        st.error(f"❌ Error: {e}")
+        
+        # Integration Status
+        st.markdown("---")
+        st.subheader("📈 Integration Status")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Streamlit Port", "5000", "Frontend UI")
+        
+        with col2:
+            st.metric("FastAPI Port", "8000", "Backend API")
+        
+        with col3:
+            try:
+                response = requests.get("http://localhost:8000/health", timeout=3)
+                if response.status_code == 200:
+                    st.metric("API Status", "✅ Online", "Healthy")
+                else:
+                    st.metric("API Status", "⚠️ Issues", f"Status {response.status_code}")
+            except:
+                st.metric("API Status", "❌ Offline", "Not reachable")
     
     def _generate_system_report(self):
         """Generate system report"""
