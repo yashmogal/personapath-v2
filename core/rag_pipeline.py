@@ -204,67 +204,42 @@ class RAGPipeline:
         source_role_data = None
         target_role_data = None
         
-        # Enhanced role keywords with exact matching
+        # Common role keywords
         roles = {
-            'software development': ['Software Development', 'Software Developer', 'Developer'],
-            'software developer': ['Software Development', 'Software Developer', 'Developer'], 
-            'developer': ['Software Development', 'Software Developer', 'Developer'],
-            'programming': ['Software Development', 'Software Developer', 'Developer'],
-            'cashier': ['Cashier'],
-            'data scientist': ['Data Scientist', 'Data Science'],
-            'data science': ['Data Scientist', 'Data Science'],
-            'data engineer': ['Data Engineer'],
-            'data analyst': ['Data Analyst'],
-            'marketing': ['Marketing Specialist', 'Marketing Manager', 'Marketing'],
-            'marketing specialist': ['Marketing Specialist'],
-            'marketing manager': ['Marketing Manager'],
-            'sales': ['Sales Representative', 'Sales Manager', 'Sales'],
-            'hr': ['Human Resources', 'HR Specialist', 'HR Manager'],
-            'human resources': ['Human Resources', 'HR Specialist', 'HR Manager'],
-            'product manager': ['Product Manager', 'Product Management'],
-            'product management': ['Product Manager', 'Product Management'],
-            'web developer': ['Web Developer', 'Frontend Developer', 'Backend Developer'],
-            'frontend developer': ['Frontend Developer'],
-            'backend developer': ['Backend Developer'],
-            'full stack developer': ['Full Stack Developer'],
-            'qa engineer': ['QA Engineer', 'Quality Assurance'],
-            'business analyst': ['Business Analyst'],
-            'project manager': ['Project Manager']
+            'software development': 'Software Development',
+            'software developer': 'Software Development', 
+            'developer': 'Software Development',
+            'programming': 'Software Development',
+            'cashier': 'Cashier',
+            'data scientist': 'Data Science',
+            'data science': 'Data Science',
+            'marketing': 'Marketing',
+            'sales': 'Sales',
+            'hr': 'Human Resources',
+            'human resources': 'Human Resources',
+            'product manager': 'Product Management',
+            'product management': 'Product Management'
         }
         
-        # More precise role extraction
-        import re
+        # Find source and target roles in query
+        for keyword, role_name in roles.items():
+            if f"from {keyword}" in query_lower:
+                source_role = role_name
+            if f"to {keyword}" in query_lower:
+                target_role = role_name
         
-        # Pattern to match "from X to Y"
-        from_to_pattern = r'from\s+([\w\s]+?)\s+to\s+([\w\s]+?)(?:\s|$)'
-        match = re.search(from_to_pattern, query_lower)
-        
-        if match:
-            source_text = match.group(1).strip()
-            target_text = match.group(2).strip()
+        # Handle "between X and Y" queries
+        if "between" in query_lower and "and" in query_lower:
+            # Extract roles mentioned in the query
+            mentioned_roles = []
+            for keyword, role_name in roles.items():
+                if keyword in query_lower:
+                    mentioned_roles.append(role_name)
             
-            # Find matching roles
-            for keyword, role_variations in roles.items():
-                if keyword in source_text or any(var.lower() in source_text for var in role_variations):
-                    source_role = role_variations[0]  # Use primary role name
-                if keyword in target_text or any(var.lower() in target_text for var in role_variations):
-                    target_role = role_variations[0]  # Use primary role name
-        
-        # Alternative patterns
-        if not source_role or not target_role:
-            # Pattern "switch from X to Y" or "transition from X to Y"
-            switch_pattern = r'(?:switch|transition|change|move)\s+from\s+([\w\s]+?)\s+to\s+([\w\s]+?)(?:\s|$)'
-            match = re.search(switch_pattern, query_lower)
-            
-            if match:
-                source_text = match.group(1).strip()
-                target_text = match.group(2).strip()
-                
-                for keyword, role_variations in roles.items():
-                    if keyword in source_text:
-                        source_role = role_variations[0]
-                    if keyword in target_text:
-                        target_role = role_variations[0]
+            # If we found exactly 2 roles, assume first is source, second is target
+            if len(mentioned_roles) == 2:
+                source_role = mentioned_roles[0]
+                target_role = mentioned_roles[1]
         
         # Get role data from database if available
         if source_role or target_role:
@@ -273,27 +248,13 @@ class RAGPipeline:
                 
                 for role in all_roles:
                     role_title = role.get('title', '').lower()
-                    role_description = role.get('description', '').lower()
-                    
-                    # Better matching logic
-                    if source_role:
-                        source_keywords = [source_role.lower(), 
-                                         source_role.lower().replace(' ', ''),
-                                         source_role.split()[0].lower() if ' ' in source_role else source_role.lower()]
-                        
-                        if any(keyword in role_title or keyword in role_description for keyword in source_keywords):
-                            source_role_data = role
-                    
-                    if target_role:
-                        target_keywords = [target_role.lower(), 
-                                         target_role.lower().replace(' ', ''),
-                                         target_role.split()[0].lower() if ' ' in target_role else target_role.lower()]
-                        
-                        if any(keyword in role_title or keyword in role_description for keyword in target_keywords):
-                            target_role_data = role
+                    if source_role and source_role.lower() in role_title:
+                        source_role_data = role
+                    if target_role and target_role.lower() in role_title:
+                        target_role_data = role
             except Exception as e:
                 # Continue with generic response if database lookup fails
-                st.warning(f"Database lookup failed: {e}")
+                pass
         
         if source_role and target_role:
             # Build response with database information when available
@@ -351,7 +312,6 @@ Career transitions can offer new challenges, different work environments, and fr
 - **Career Growth:** Evaluate long-term advancement opportunities
 
 **Transition Strategy:**
-
 1. **Research Phase:**
    - Shadow someone in {target_role} if possible
    - Understand day-to-day responsibilities
@@ -410,29 +370,15 @@ Feel free to ask about specific role transitions like "How do I switch from X to
         # Simple keyword-based responses for common queries
         query_lower = query.lower()
         
-        # Enhanced career transition detection
+        # Career transition queries (switching from one role to another)
         transition_phrases = [
             "switch from", "transition from", "change from", "move from",
             "switch between", "transition between", "change between", "move between",
-            "how to switch", "switching from", "switching between", "switching to",
-            "from", "to"  # Simple patterns
+            "how to switch", "switching from", "switching between"
         ]
         
-        # Check if it's a career transition query
-        is_transition = any(phrase in query_lower for phrase in transition_phrases)
-        
-        # Also check for role-to-role patterns
-        role_keywords = ['developer', 'engineer', 'manager', 'analyst', 'scientist', 'cashier', 'specialist']
-        mentioned_roles = [role for role in role_keywords if role in query_lower]
-        
-        if is_transition or len(mentioned_roles) >= 2:
+        if any(phrase in query_lower for phrase in transition_phrases):
             return self._handle_career_transition(query_lower)
-        
-        # Try to get data from database for single role queries
-        if len(mentioned_roles) == 1 or any(role in query_lower for role in ['what is', 'tell me about', 'describe']):
-            database_response = self._get_database_role_info(query_lower)
-            if database_response:
-                return database_response
         
         # Software Development roles - with specific question handling
         if "software development" in query_lower or "software developer" in query_lower:
@@ -598,40 +544,6 @@ A cashier is a retail professional responsible for processing customer transacti
 
 **Career Path:**
 Cashier → Senior Cashier → Shift Supervisor → Assistant Manager → Store Manager
-
-
-    def _get_database_role_info(self, query: str) -> Optional[str]:
-        """Get role information directly from database"""
-        try:
-            # Search for roles in database
-            roles = self.db_manager.search_job_roles(query)
-            
-            if roles:
-                # Return information for the first matching role
-                role = roles[0]
-                return f"""**{role.get('title', 'Role')} - Database Information**
-
-**Department:** {role.get('department', 'Not specified')}
-**Level:** {role.get('level', 'Not specified')}
-**Required Skills:** {role.get('skills_required', 'Not specified')}
-
-**Description:**
-{role.get('description', 'No description available')}
-
-**Additional Information:**
-This role information is from our internal database. For more details about career paths, transitions, or skill development related to this role, feel free to ask specific questions.
-
-Would you like to know about:
-- Career progression paths for this role
-- Skills needed to transition to this role
-- Similar roles in our organization
-- Mentors who can help with this career path"""
-            
-            return None
-            
-        except Exception as e:
-            return None
-
 
 **Typical Salary Range:** $25,000 - $35,000 annually, often with opportunities for advancement"""
 
