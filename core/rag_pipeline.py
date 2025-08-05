@@ -201,9 +201,115 @@ class RAGPipeline:
         # Simple keyword-based responses for common queries
         query_lower = query.lower()
         
-        # Software Development roles
+        # Software Development roles - with specific question handling
         if "software development" in query_lower or "software developer" in query_lower:
-            return """**Software Development:**
+            # Check for specific questions about salary
+            if any(word in query_lower for word in ["salary", "pay", "compensation", "wage", "income", "earn"]):
+                return """**Software Developer Salary Information:**
+
+**Salary Range by Experience Level:**
+- **Entry Level (0-2 years):** $60,000 - $80,000
+- **Mid-Level (2-5 years):** $80,000 - $120,000  
+- **Senior Level (5+ years):** $120,000 - $180,000
+- **Lead/Principal (8+ years):** $150,000 - $250,000+
+
+**Factors Affecting Salary:**
+- Geographic location (Silicon Valley, NYC pay higher)
+- Company size and type (startups vs. big tech)
+- Specific technologies and skills
+- Industry domain (fintech, healthcare, etc.)
+- Education and certifications
+
+**Additional Compensation:**
+- Stock options/equity
+- Performance bonuses
+- Health benefits
+- Professional development budget
+- Remote work flexibility
+
+**High-Paying Specializations:**
+- Machine Learning/AI Development
+- Cloud Architecture
+- DevOps/Site Reliability Engineering
+- Full-Stack Development
+- Mobile App Development"""
+            
+            # Check for career path questions
+            elif any(word in query_lower for word in ["career", "path", "progression", "growth", "advance"]):
+                return """**Software Developer Career Path:**
+
+**Traditional Progression:**
+1. **Intern/Junior Developer** (0-2 years)
+   - Learn fundamentals, work on small features
+   - Mentored by senior developers
+   
+2. **Software Developer** (2-4 years)
+   - Independent feature development
+   - Code reviews and testing
+   
+3. **Senior Software Developer** (4-7 years)
+   - Lead complex projects
+   - Mentor junior developers
+   - Architecture decisions
+   
+4. **Lead Developer/Tech Lead** (7-10 years)
+   - Team leadership
+   - Technical strategy
+   - Cross-team collaboration
+
+**Specialization Paths:**
+- **Management Track:** Engineering Manager → Director → VP of Engineering
+- **Technical Track:** Principal Engineer → Distinguished Engineer → CTO
+- **Product Track:** Product Engineer → Product Manager
+- **Consulting Track:** Technical Consultant → Solution Architect
+
+**Skills for Advancement:**
+- Leadership and communication
+- System design and architecture
+- Business understanding
+- Mentoring abilities"""
+            
+            # Check for skills questions
+            elif any(word in query_lower for word in ["skill", "learn", "technology", "programming", "language"]):
+                return """**Software Development Skills:**
+
+**Core Programming Languages:**
+- **Backend:** Python, Java, C#, Go, Ruby
+- **Frontend:** JavaScript, TypeScript, HTML, CSS
+- **Mobile:** Swift (iOS), Kotlin (Android), React Native
+- **Systems:** C++, Rust, C
+
+**Essential Technical Skills:**
+- Version Control (Git, GitHub)
+- Database Management (SQL, NoSQL)
+- Web Development Frameworks
+- Testing and Debugging
+- API Development and Integration
+- Cloud Platforms (AWS, Azure, GCP)
+
+**Development Methodologies:**
+- Agile/Scrum development
+- Test-Driven Development (TDD)
+- DevOps practices
+- Continuous Integration/Deployment
+
+**Soft Skills:**
+- Problem-solving and analytical thinking
+- Communication and teamwork
+- Project management
+- Learning agility
+- Attention to detail
+
+**Learning Path:**
+1. Master one programming language thoroughly
+2. Learn data structures and algorithms
+3. Build projects and contribute to open source
+4. Understand software architecture patterns
+5. Stay updated with industry trends"""
+            
+            # Default software development overview
+            else:
+                return """**Software Development Overview:**
 
 **What is Software Development?**
 Software development is the process of creating, designing, testing, and maintaining computer programs and applications. It involves writing code to solve problems and create digital solutions.
@@ -215,18 +321,25 @@ Software development is the process of creating, designing, testing, and maintai
 - Maintaining and updating existing software systems
 - Following software development methodologies (Agile, Scrum)
 
-**Essential Skills:**
-- Programming languages (Python, Java, JavaScript, C++, etc.)
-- Problem-solving and logical thinking
-- Version control systems (Git)
-- Database management
-- Software testing and debugging
-- Understanding of algorithms and data structures
+**Types of Software Development:**
+- **Web Development:** Websites and web applications
+- **Mobile Development:** iOS and Android apps
+- **Desktop Applications:** Software for computers
+- **Game Development:** Video games and interactive media
+- **System Software:** Operating systems and utilities
+- **Embedded Systems:** Software for hardware devices
 
-**Career Path:**
-Junior Developer → Software Developer → Senior Developer → Team Lead → Engineering Manager
+**Work Environment:**
+- Collaborative team settings
+- Remote work opportunities
+- Continuous learning culture
+- Fast-paced, evolving technology landscape
 
-**Typical Salary Range:** $60,000 - $150,000+ depending on experience and location"""
+**Industry Demand:**
+- High job growth (22% projected growth)
+- Opportunities across all industries
+- Strong job security
+- Flexible career paths"""
 
         elif "cashier" in query_lower:
             return """**Cashier Role:**
