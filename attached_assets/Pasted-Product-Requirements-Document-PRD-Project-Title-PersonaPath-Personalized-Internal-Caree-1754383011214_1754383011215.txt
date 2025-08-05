@@ -1,0 +1,215 @@
+Product Requirements Document (PRD)
+ð Project Title
+PersonaPath â Personalized Internal Career Intelligence & Mentorship Assistant
+
+ð Product Vision
+PersonaPath is an AI-powered internal career exploration and development assistant that helps employees understand job roles, discover personalized career paths, close skill gaps, and connect with mentors within the organization â all via a chat-based natural language interface.
+
+It integrates semantic job search, retrieval-augmented generation (RAG), LLM-based Q&A, and personalized guidance into one seamless experience.
+
+ð§© Core Technologies
+Layer	Stack / Tool
+Frontend	React, Tailwind CSS
+Backend API	FastAPI (Python)
+LangChain	LangChain RAG, Memory, Agents
+Embeddings	OpenAI / HuggingFace / Qwen via OpenRouter
+Vector Store	FAISS (in-memory)
+Database	SQLite (lightweight, file-based DB)
+LLM Provider	Qwen via OpenRouter
+Authentication	OAuth (Google/Microsoft)
+
+ð§âð¤âð§ Stakeholders & Personas
+Persona	Description	Goals
+Employee	General workforce	Explore roles, discover paths
+HR Manager	Maintains job roles	Upload roles, clarify expectations
+Manager	Team leads	Guide teams, recommend growth
+L&D Analyst	Training & development experts	Skill gap analysis, module recommendations
+Admin	System owners	Analytics, access control
+
+ðï¸ Technical Architecture
+ð Core RAG Flow
+mermaid
+Copy
+Edit
+flowchart TD
+    A[User Uploads Role Document] --> B[LangChain Chunking + Embedding]
+    B --> C[FAISS Vector Store]
+    D[User Query] --> E[Retriever (Semantic Search)]
+    E --> F[LLM via OpenRouter (Qwen)]
+    F --> G[Response (Chat UI)]
+ð¯ Key Features
+ð§© Core Features
+ð Document Upload
+Upload PDF, DOCX, or TXT files
+
+Extract metadata: title, department, level
+
+Chunking via LangChain
+
+Store embeddings in FAISS
+
+ð¬ Conversational Q&A
+Users can query role documents
+
+LangChain RAG pipeline: Vector Search + LLM Answering
+
+Uses Qwen model via OpenRouter
+
+Grounded responses from job descriptions
+
+ð Job Role Search
+Fuzzy search by title or department
+
+Snippet preview of roles
+
+Auto-suggestions dropdown
+
+ð§¾ Chat Interface
+Clean role-based Q&A panel
+
+Role tagging and metadata display
+
+Query history (optional memory)
+
+ð§  Capstone Features (Personalization Layer)
+ð¤ Persistent User Memory
+Track user's current role, goals, skills
+
+Store in SQLite using LangChainâs memory
+
+ð Skill Gap Analysis
+Compare current vs. target role skills
+
+Visualize missing skills
+
+Suggest upskilling modules
+
+ðºï¸ Career Roadmap Generator
+Generate multi-step path to target role
+
+Include lateral and growth roles
+
+Timeline estimation
+
+ð§âð« Mentor + LMS Recommendations
+Suggest mentors based on similar journeys
+
+Link to LMS modules with outcomes
+
+Prioritize based on skill gap
+
+ð Admin & Analytics
+Usage metrics: search trends, queries
+
+Track unanswered questions
+
+Department-wise role interest
+
+Feedback via thumbs/stars
+
+ð¼ï¸ UI Components (Frontend Design)
+The frontend will follow the previously uploaded design:
+
+Landing Page with tagline, mission
+
+Role Upload Panel (visible only to HR)
+
+Smart Role Search Bar with auto-suggestions
+
+Chat Interface
+
+Left: Past queries
+
+Right: Chat view with follow-up suggestions
+
+Roadmap Tab
+
+Horizontal steps to show path to target role
+
+Skill Gap Visualization
+
+Chart or bar graphs for current vs desired
+
+Mentor Suggestions
+
+List with profile photos, transitions, commonalities
+
+ð Access Control
+Role	Permissions
+Employee	Chat, Search, Q&A, Roadmap
+HR Manager	Upload Roles, Tag Roles
+Admin	View analytics, manage access
+
+OAuth 2.0 based login via Google/Microsoft
+
+Context-aware role-based access
+
+â Development Guidelines
+ð§ Must be implemented entirely in Python
+
+âï¸ Backend must use FastAPI
+
+ð§  AI flow must use LangChain and Retrieval-Augmented Generation (RAG)
+
+ð SQLite to be used as primary database
+
+â¨ React + Tailwind for frontend (classic layout)
+
+ð¾ Memory module using LangChainâs ConversationBufferMemory or SQLite-backed memory (custom)
+
+ð§ª Testing & QA
+â Unit tests for FastAPI endpoints
+
+â Precision/recall for RAG responses
+
+â Frontend usability and responsiveness tests
+
+â LLM latency benchmarks
+
+â Upload & embedding stress tests
+
+â Security audit for file uploads & OAuth
+
+ð KPIs & Success Metrics
+Metric	Description
+Active Weekly Users	Measures engagement
+Role Queries / Week	How often employees interact
+Upload Completion Rate	HR effectiveness
+Career Roadmaps Viewed	Engagement with growth tools
+Skill Gap Accuracy	Relevance of personalization
+Mentor Suggestions Clicks	Adoption of mentorship
+Module Completion Rate	LMS integration success
+Feedback Satisfaction	Avg. thumbs/stars per query
+
+ð¬ Sample Interactions
+Query	Sample LLM Response
+âWhatâs the difference between Data Engineer and Analyst?â	"Analysts interpret data, engineers build pipelines..."
+âHow can I move from sales to product management?â	"Youâll need skills in user research, roadmapping, prioritization..."
+âAny mentors whoâve made this switch?â	"Try Neha M â she moved from sales to PM in 2022."
+
+ð File & Folder Structure (High-Level)
+bash
+Copy
+Edit
+PersonaPath/
+âââ backend/
+â   âââ main.py              # FastAPI app entry
+â   âââ api/
+â   â   âââ endpoints.py     # Upload, chat, roadmap, mentors
+â   âââ core/
+â   â   âââ rag.py           # LangChain RAG logic
+â   â   âââ skill_gap.py     # Comparison logic
+â   âââ db/
+â   â   âââ models.py        # SQLite models (User, Role, Mentor)
+â   â   âââ vectorstore.py   # FAISS wrapper
+â   âââ auth/                # OAuth logic
+âââ frontend/
+â   âââ public/
+â   âââ src/
+â   â   âââ App.tsx
+â   â   âââ pages/
+â   â   âââ components/
+â   âââ tailwind.config.js
+âââ .env
+âââ requirements.txt
+âââ README.md
