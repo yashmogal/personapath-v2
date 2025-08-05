@@ -163,7 +163,7 @@ async def create_job(job_data: JobRole):
 async def chat_with_ai(message_data: ChatMessage):
     """Chat with AI using RAG pipeline"""
     try:
-        response = rag_pipeline.process_query(message_data.message)
+        response = rag_pipeline.query_documents(message_data.message, user_id=1)
         return {"response": response, "timestamp": datetime.now().isoformat()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
