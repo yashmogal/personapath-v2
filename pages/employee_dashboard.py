@@ -54,7 +54,40 @@ class EmployeeDashboard:
         if 'chat_messages' not in st.session_state:
             st.session_state.chat_messages = []
         
-        # Chat input
+        # Chat history management buttons
+        col1, col2, col3 = st.columns([1, 1, 2])
+        with col1:
+            if st.button("🗑️ Clear Chat", help="Clear current conversation"):
+                st.session_state.chat_messages = []
+                st.rerun()
+        
+        with col2:
+            if st.button("💾 Save Chat", help="Save to chat history"):
+                if st.session_state.chat_messages:
+                    # Save current conversation to database
+                    conversation = "\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_messages])
+                    self.db_manager.save_chat_history(
+                        user_id=st.session_state.user_id,
+                        query="Full Conversation",
+                        response=conversation
+                    )
+                    st.success("Chat saved to history!")
+        
+        # Chat messages container with fixed height
+        chat_container = st.container(height=400)
+        
+        with chat_container:
+            # Display chat messages
+            for i, message in enumerate(st.session_state.chat_messages):
+                with st.chat_message(message["role"]):
+                    st.write(message["content"])
+                    
+                    # Add delete button for individual messages
+                    if st.button("🗑️", key=f"delete_{i}", help="Delete this message"):
+                        del st.session_state.chat_messages[i]
+                        st.rerun()
+        
+        # Always visible chat input at the bottom
         user_input = st.chat_input("Ask me about careers, roles, or skills...")
         
         if user_input:
@@ -70,11 +103,7 @@ class EmployeeDashboard:
             
             # Add AI response to chat
             st.session_state.chat_messages.append({"role": "assistant", "content": response})
-        
-        # Display chat messages
-        for message in st.session_state.chat_messages:
-            with st.chat_message(message["role"]):
-                st.write(message["content"])
+            st.rerun()
         
         # Suggested questions
         st.subheader("💡 Suggested Questions")
@@ -107,18 +136,52 @@ class EmployeeDashboard:
                 st.session_state.chat_messages.append({"role": "assistant", "content": response})
                 st.rerun()
         
-        # Chat history section
-        with st.expander("📜 Chat History"):
-            history = self.db_manager.get_chat_history(st.session_state.user_id, limit=10)
+        # Chat history section with better management
+        st.divider()
+        st.subheader("📜 Previous Conversations")
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.write("Access your saved chat conversations")
+        with col2:
+            if st.button("🗑️ Clear All History", help="Delete all saved conversations"):
+                # Add confirmation
+                if st.button("✅ Confirm Delete All", key="confirm_delete_all"):
+                    self.db_manager.clear_chat_history(st.session_state.user_id)
+                    st.success("All chat history cleared!")
+                    st.rerun()
+        
+        # Display saved chat history
+        with st.expander("📜 View Saved Chats", expanded=False):
+            history = self.db_manager.get_chat_history(st.session_state.user_id, limit=20)
             
             if history:
-                for chat in history:
-                    st.write(f"**Q:** {chat['query']}")
-                    st.write(f"**A:** {chat['response']}")
-                    st.write(f"*{chat['created_at']}*")
+                for i, chat in enumerate(history):
+                    col1, col2 = st.columns([4, 1])
+                    
+                    with col1:
+                        if len(chat['query']) > 50:
+                            display_query = chat['query'][:50] + "..."
+                        else:
+                            display_query = chat['query']
+                        
+                        st.write(f"**{display_query}**")
+                        st.write(f"*{chat['created_at']}*")
+                        
+                        # Show full conversation in expander
+                        with st.expander(f"View conversation {i+1}"):
+                            st.write(f"**Q:** {chat['query']}")
+                            st.write(f"**A:** {chat['response']}")
+                    
+                    with col2:
+                        if st.button("🗑️", key=f"delete_history_{i}", help="Delete this conversation"):
+                            self.db_manager.delete_chat_entry(chat['id'])
+                            st.success("Conversation deleted!")
+                            st.rerun()
+                    
                     st.divider()
             else:
-                st.info("No chat history yet. Start asking questions!")
+                st.info("No saved conversations yet. Use the 'Save Chat' button to save your current conversation!")
     
     def _render_role_explorer(self):
         """Render role search and exploration"""

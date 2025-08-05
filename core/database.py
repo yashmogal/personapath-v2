@@ -254,6 +254,24 @@ class DatabaseManager:
         conn.close()
         return history
     
+    def clear_chat_history(self, user_id: int):
+        """Clear all chat history for a user"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM chat_history WHERE user_id = ?", (user_id,))
+        conn.commit()
+        conn.close()
+    
+    def delete_chat_entry(self, chat_id: int):
+        """Delete a specific chat entry"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM chat_history WHERE id = ?", (chat_id,))
+        conn.commit()
+        conn.close()
+    
     def get_mentors(self) -> List[Dict]:
         """Get all mentors"""
         conn = self.get_connection()
