@@ -57,20 +57,25 @@ class RAGPipeline:
             
             # Get OpenRouter API key from environment
             openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
-            openrouter_model = os.getenv("OPENROUTER_MODEL", "qwen/qwen-2.5-72b-instruct")
+            openrouter_model = os.getenv("OPENROUTER_MODEL", "qwen/qwen3-235b-a22b-2507")
             
             if openrouter_api_key:
-                # Initialize LLM with OpenRouter
-                self.llm = ChatOpenAI(
-                    model=openrouter_model,
-                    openai_api_key=openrouter_api_key,
-                    openai_api_base="https://openrouter.ai/api/v1",
-                    temperature=0.7,
-                    max_tokens=1000
-                )
-                st.success("✅ RAG system initialized with HuggingFace embeddings and OpenRouter LLM")
+                try:
+                    # Initialize LLM with OpenRouter
+                    self.llm = ChatOpenAI(
+                        model=openrouter_model,
+                        openai_api_key=openrouter_api_key,
+                        openai_api_base="https://openrouter.ai/api/v1",
+                        temperature=0.7,
+                        max_tokens=1000
+                    )
+                    st.success("✅ RAG system initialized with embeddings and OpenRouter LLM")
+                except Exception as llm_error:
+                    st.warning(f"⚠️ OpenRouter LLM initialization failed: {llm_error}. Using fallback responses.")
+                    self.llm = None
             else:
                 st.warning("⚠️ OpenRouter API key not configured. Chat functionality will use fallback responses.")
+                self.llm = None
                 
         except Exception as e:
             st.error(f"Error initializing RAG components: {e}")

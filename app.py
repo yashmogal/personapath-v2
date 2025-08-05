@@ -1,5 +1,10 @@
 import streamlit as st
 import os
+
+# Configure OpenRouter API 
+os.environ["OPENROUTER_API_KEY"] = "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"
+os.environ["OPENROUTER_MODEL"] = "qwen/qwen3-235b-a22b-2507"
+
 from core.auth import AuthManager
 from core.database import DatabaseManager
 from pages.employee_dashboard import EmployeeDashboard
