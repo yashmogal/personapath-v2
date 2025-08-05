@@ -226,6 +226,19 @@ class RAGPipeline:
             if f"to {keyword}" in query_lower:
                 target_role = role_name
         
+        # Handle "between X and Y" queries
+        if "between" in query_lower and "and" in query_lower:
+            # Extract roles mentioned in the query
+            mentioned_roles = []
+            for keyword, role_name in roles.items():
+                if keyword in query_lower:
+                    mentioned_roles.append(role_name)
+            
+            # If we found exactly 2 roles, assume first is source, second is target
+            if len(mentioned_roles) == 2:
+                source_role = mentioned_roles[0]
+                target_role = mentioned_roles[1]
+        
         if source_role and target_role:
             return f"""**Career Transition: {source_role} → {target_role}**
 
@@ -297,7 +310,13 @@ Feel free to ask about specific role transitions like "How do I switch from X to
         query_lower = query.lower()
         
         # Career transition queries (switching from one role to another)
-        if any(phrase in query_lower for phrase in ["switch from", "transition from", "change from", "move from"]):
+        transition_phrases = [
+            "switch from", "transition from", "change from", "move from",
+            "switch between", "transition between", "change between", "move between",
+            "how to switch", "switching from", "switching between"
+        ]
+        
+        if any(phrase in query_lower for phrase in transition_phrases):
             return self._handle_career_transition(query_lower)
         
         # Software Development roles - with specific question handling
