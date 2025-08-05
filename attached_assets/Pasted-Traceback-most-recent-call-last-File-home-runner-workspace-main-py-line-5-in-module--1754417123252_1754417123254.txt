@@ -1,0 +1,30 @@
+Traceback (most recent call last):
+  File "/home/runner/workspace/main.py", line 5, in <module>
+    from fastapi import FastAPI, Request
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/fastapi/__init__.py", line 7, in <module>
+    from .applications import FastAPI as FastAPI
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/fastapi/applications.py", line 16, in <module>
+    from fastapi import routing
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/fastapi/routing.py", line 25, in <module>
+    from fastapi import params
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/fastapi/params.py", line 5, in <module>
+    from fastapi.openapi.models import Example
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/fastapi/openapi/models.py", line 4, in <module>
+    from fastapi._compat import (
+    ...<6 lines>...
+    )
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/fastapi/_compat.py", line 22, in <module>
+    from fastapi.exceptions import RequestErrorModel
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/fastapi/exceptions.py", line 3, in <module>
+    from pydantic import BaseModel, create_model
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/pydantic/__init__.py", line 5, in <module>
+    from ._migration import getattr_migration
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/pydantic/_migration.py", line 4, in <module>
+    from .version import version_short
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/pydantic/version.py", line 5, in <module>
+    from pydantic_core import __version__ as __pydantic_core_version__
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/pydantic_core/__init__.py", line 6, in <module>
+    from ._pydantic_core import (
+    ...<22 lines>...
+    )
+ModuleNotFoundError: No module named 'pydantic_core._pydantic_core'
