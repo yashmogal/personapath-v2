@@ -6,7 +6,7 @@ try:
     HUGGINGFACE_AVAILABLE = True
 except ImportError:
     HUGGINGFACE_AVAILABLE = False
-    from .simple_embeddings import SimpleEmbeddings
+    # Import will be done later to avoid circular imports
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.memory import ConversationBufferMemory
@@ -47,9 +47,11 @@ class RAGPipeline:
                     st.info("✅ Using HuggingFace embeddings (all-MiniLM-L6-v2)")
                 except Exception:
                     # Fallback to simple embeddings
+                    from .simple_embeddings import SimpleEmbeddings
                     self.embeddings = SimpleEmbeddings()
                     st.info("✅ Using simple embeddings (fallback)")
             else:
+                from .simple_embeddings import SimpleEmbeddings
                 self.embeddings = SimpleEmbeddings()
                 st.info("✅ Using simple embeddings (sentence-transformers not available)")
             
@@ -80,10 +82,12 @@ class RAGPipeline:
                     )
                     st.info("✅ Embeddings initialized successfully, LLM in demo mode")
                 else:
+                    from .simple_embeddings import SimpleEmbeddings
                     self.embeddings = SimpleEmbeddings()
                     st.info("✅ Simple embeddings initialized, LLM in demo mode")
             except Exception as e2:
                 st.error(f"Failed to initialize embeddings: {e2}")
+                from .simple_embeddings import SimpleEmbeddings
                 self.embeddings = SimpleEmbeddings()
                 st.info("✅ Using basic fallback embeddings")
     
