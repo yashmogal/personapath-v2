@@ -196,11 +196,13 @@ class RAGPipeline:
             return error_msg
     
     def _handle_career_transition(self, query_lower: str) -> str:
-        """Handle career transition queries"""
+        """Handle career transition queries with database role information"""
         
         # Parse source and target roles
         source_role = None
         target_role = None
+        source_role_data = None
+        target_role_data = None
         
         # Common role keywords
         roles = {
@@ -239,10 +241,67 @@ class RAGPipeline:
                 source_role = mentioned_roles[0]
                 target_role = mentioned_roles[1]
         
+        # Get role data from database if available
+        if source_role or target_role:
+            try:
+                all_roles = self.db_manager.get_job_roles()
+                
+                for role in all_roles:
+                    role_title = role.get('title', '').lower()
+                    if source_role and source_role.lower() in role_title:
+                        source_role_data = role
+                    if target_role and target_role.lower() in role_title:
+                        target_role_data = role
+            except Exception as e:
+                # Continue with generic response if database lookup fails
+                pass
+        
         if source_role and target_role:
-            return f"""**Career Transition: {source_role} → {target_role}**
+            # Build response with database information when available
+            response = f"""**Career Transition: {source_role} → {target_role}**
 
-**Why Make This Change?**
+"""
+            
+            # Add specific role information if available
+            if source_role_data:
+                response += f"""**Current Role: {source_role_data.get('title', source_role)}**
+- **Department:** {source_role_data.get('department', 'N/A')}
+- **Level:** {source_role_data.get('level', 'N/A')}
+- **Key Skills:** {source_role_data.get('skills_required', 'N/A')}
+- **Description:** {source_role_data.get('description', 'N/A')[:200]}...
+
+"""
+            
+            if target_role_data:
+                response += f"""**Target Role: {target_role_data.get('title', target_role)}**
+- **Department:** {target_role_data.get('department', 'N/A')}
+- **Level:** {target_role_data.get('level', 'N/A')}
+- **Required Skills:** {target_role_data.get('skills_required', 'N/A')}
+- **Description:** {target_role_data.get('description', 'N/A')[:200]}...
+
+"""
+            
+            # Add transition analysis based on available data
+            if source_role_data and target_role_data:
+                source_skills = set(skill.strip().lower() for skill in source_role_data.get('skills_required', '').split(',') if skill.strip())
+                target_skills = set(skill.strip().lower() for skill in target_role_data.get('skills_required', '').split(',') if skill.strip())
+                
+                transferable_skills = source_skills.intersection(target_skills)
+                skill_gaps = target_skills - source_skills
+                
+                if transferable_skills:
+                    response += f"""**Transferable Skills:**
+{', '.join(skill.title() for skill in transferable_skills)}
+
+"""
+                
+                if skill_gaps:
+                    response += f"""**Skills to Develop:**
+{', '.join(skill.title() for skill in skill_gaps)}
+
+"""
+            
+            response += f"""**Why Make This Change?**
 Career transitions can offer new challenges, different work environments, and fresh opportunities for growth.
 
 **Key Considerations:**
@@ -282,6 +341,8 @@ Career transitions can offer new challenges, different work environments, and fr
 - Consider informational interviews with people in {target_role}
 
 Would you like specific advice about transitioning from {source_role} to {target_role}?"""
+            
+            return response
         
         return """**Career Transition Guidance:**
 
