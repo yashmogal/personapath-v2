@@ -112,7 +112,6 @@ async def register(user_data: UserRegister):
         success = auth_manager.register_user(
             user_data.username, 
             user_data.password, 
-            user_data.email, 
             user_data.role
         )
         if success:
