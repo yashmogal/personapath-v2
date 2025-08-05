@@ -91,21 +91,8 @@ class UnifiedServer:
                 </html>
                 """)
             
-            # Return HTML that opens Streamlit in an iframe or redirect
-            return HTMLResponse(f"""
-            <html>
-                <head>
-                    <title>PersonaPath - Career Intelligence Platform</title>
-                    <style>
-                        body {{ margin: 0; padding: 0; }}
-                        iframe {{ width: 100%; height: 100vh; border: none; }}
-                    </style>
-                </head>
-                <body>
-                    <iframe src="http://localhost:8501" frameborder="0"></iframe>
-                </body>
-            </html>
-            """)
+            # Direct redirect to Streamlit on port 8501
+            return RedirectResponse(url="http://localhost:8501", status_code=302)
         
         @app.get("/health")
         async def health():
