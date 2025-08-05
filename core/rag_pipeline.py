@@ -195,11 +195,110 @@ class RAGPipeline:
             
             return error_msg
     
+    def _handle_career_transition(self, query_lower: str) -> str:
+        """Handle career transition queries"""
+        
+        # Parse source and target roles
+        source_role = None
+        target_role = None
+        
+        # Common role keywords
+        roles = {
+            'software development': 'Software Development',
+            'software developer': 'Software Development', 
+            'developer': 'Software Development',
+            'programming': 'Software Development',
+            'cashier': 'Cashier',
+            'data scientist': 'Data Science',
+            'data science': 'Data Science',
+            'marketing': 'Marketing',
+            'sales': 'Sales',
+            'hr': 'Human Resources',
+            'human resources': 'Human Resources',
+            'product manager': 'Product Management',
+            'product management': 'Product Management'
+        }
+        
+        # Find source and target roles in query
+        for keyword, role_name in roles.items():
+            if f"from {keyword}" in query_lower:
+                source_role = role_name
+            if f"to {keyword}" in query_lower:
+                target_role = role_name
+        
+        if source_role and target_role:
+            return f"""**Career Transition: {source_role} → {target_role}**
+
+**Why Make This Change?**
+Career transitions can offer new challenges, different work environments, and fresh opportunities for growth.
+
+**Key Considerations:**
+- **Transferable Skills:** Identify skills from {source_role} that apply to {target_role}
+- **Skill Gaps:** Understand what new skills you'll need to develop
+- **Compensation Impact:** Research salary differences between roles
+- **Work Environment:** Consider how daily responsibilities will change
+- **Career Growth:** Evaluate long-term advancement opportunities
+
+**Transition Strategy:**
+1. **Research Phase:**
+   - Shadow someone in {target_role} if possible
+   - Understand day-to-day responsibilities
+   - Learn about required qualifications
+
+2. **Skill Development:**
+   - Identify specific skills needed for {target_role}
+   - Take relevant courses or certifications
+   - Gain experience through side projects or volunteering
+
+3. **Network Building:**
+   - Connect with professionals in {target_role}
+   - Join relevant professional associations
+   - Attend industry events and meetups
+
+4. **Application Strategy:**
+   - Highlight transferable skills on your resume
+   - Craft a compelling career change narrative
+   - Practice explaining your motivation for the transition
+
+**Timeline:** Most career transitions take 6-18 months depending on the roles involved and preparation needed.
+
+**Next Steps:**
+- Create a detailed transition plan with milestones
+- Start building relevant skills immediately
+- Begin networking in your target field
+- Consider informational interviews with people in {target_role}
+
+Would you like specific advice about transitioning from {source_role} to {target_role}?"""
+        
+        return """**Career Transition Guidance:**
+
+I can help you plan a career transition! To provide specific advice, I'd need to know:
+
+1. **Current Role:** What position are you transitioning from?
+2. **Target Role:** What role are you interested in moving to?
+3. **Timeline:** When are you hoping to make this change?
+4. **Motivation:** What's driving this career change?
+
+**General Transition Tips:**
+- Assess transferable skills from your current role
+- Research the target role thoroughly
+- Identify skill gaps and create a development plan
+- Build a network in your target field
+- Consider gradual transitions or hybrid roles
+- Prepare for potential salary changes
+
+Feel free to ask about specific role transitions like "How do I switch from X to Y role?"
+"""
+    
     def _fallback_response(self, query: str) -> str:
         """Provide fallback response when RAG is not available"""
         
         # Simple keyword-based responses for common queries
         query_lower = query.lower()
+        
+        # Career transition queries (switching from one role to another)
+        if any(phrase in query_lower for phrase in ["switch from", "transition from", "change from", "move from"]):
+            return self._handle_career_transition(query_lower)
         
         # Software Development roles - with specific question handling
         if "software development" in query_lower or "software developer" in query_lower:
