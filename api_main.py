@@ -94,10 +94,10 @@ async def login(user_data: UserLogin):
             return {
                 "success": True,
                 "user": {
-                    "id": user[0],
-                    "username": user[1],
-                    "email": user[2],
-                    "role": user[3]
+                    "id": user["id"],
+                    "username": user["username"],
+                    "role": user["role"],
+                    "created_at": user["created_at"]
                 }
             }
         else:
