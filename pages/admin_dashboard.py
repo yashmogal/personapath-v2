@@ -827,14 +827,14 @@ class AdminDashboard:
     def _render_api_integration(self):
         """Render API integration and testing interface"""
         st.header("🚀 API Integration")
-        st.write("Test and manage the PersonaPath API endpoints running on the unified port 5000.")
+        st.write("Test and manage the PersonaPath API endpoints. Frontend runs on port 5000, API on port 8000.")
         
         # API Documentation section
         col1, col2 = st.columns([1, 1])
         
         with col1:
             st.subheader("📚 API Documentation")
-            st.write("The API server is running on port 5000 under /api with the following endpoints:")
+            st.write("The API server is running on port 8000 with the following endpoints:")
             
             api_endpoints = {
                 "Health & Status": [
@@ -889,7 +889,7 @@ class AdminDashboard:
             
             with col_docs1:
                 st.markdown("""
-                <a href="/api/docs" target="_blank" 
+                <a href="http://localhost:8000/docs" target="_blank" 
                    style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                           color: white; text-decoration: none; border-radius: 8px; font-weight: 600; text-align: center; width: 100%;">
                     📚 Swagger UI
@@ -898,7 +898,7 @@ class AdminDashboard:
             
             with col_docs2:
                 st.markdown("""
-                <a href="/api/redoc" target="_blank"
+                <a href="http://localhost:8000/redoc" target="_blank"
                    style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
                           color: white; text-decoration: none; border-radius: 8px; font-weight: 600; text-align: center; width: 100%;">
                     📖 ReDoc
@@ -913,15 +913,15 @@ class AdminDashboard:
             import requests
             
             try:
-                response = requests.get("http://localhost:5000/api/health", timeout=5)
+                response = requests.get("http://localhost:8000/health", timeout=5)
                 if response.status_code == 200:
-                    st.success("✅ Unified App Server is running")
+                    st.success("✅ API Server is running")
                     health_data = response.json()
                     st.json(health_data)
                 else:
                     st.error(f"❌ Server responded with status {response.status_code}")
             except requests.exceptions.ConnectionError:
-                st.error("❌ Cannot connect to unified app server on port 5000")
+                st.error("❌ Cannot connect to API server on port 8000")
             except requests.exceptions.Timeout:
                 st.warning("⚠️ Server request timed out")
             except Exception as e:
@@ -944,7 +944,7 @@ class AdminDashboard:
             
             if st.button("Test Health Endpoint", key="test_health"):
                 try:
-                    response = requests.get("http://localhost:5000/api/health")
+                    response = requests.get("http://localhost:8000/health")
                     st.success(f"✅ Status: {response.status_code}")
                     st.json(response.json())
                 except Exception as e:
@@ -952,7 +952,7 @@ class AdminDashboard:
             
             if st.button("Test Root Endpoint", key="test_root"):
                 try:
-                    response = requests.get("http://localhost:5000/api/")
+                    response = requests.get("http://localhost:8000/")
                     st.success(f"✅ Status: {response.status_code}")
                     st.json(response.json())
                 except Exception as e:
@@ -965,7 +965,7 @@ class AdminDashboard:
             if st.button("Send Chat Message", key="test_chat") and chat_message:
                 try:
                     response = requests.post(
-                        "http://localhost:5000/api/chat",
+                        "http://localhost:8000/chat",
                         json={"message": chat_message}
                     )
                     if response.status_code == 200:
@@ -984,7 +984,7 @@ class AdminDashboard:
             
             if st.button("Get All Jobs", key="test_jobs"):
                 try:
-                    response = requests.get("http://localhost:5000/api/jobs")
+                    response = requests.get("http://localhost:8000/jobs")
                     if response.status_code == 200:
                         st.success("✅ Jobs API working")
                         data = response.json()
@@ -1004,7 +1004,7 @@ class AdminDashboard:
             with col_skill1:
                 if st.button("Get Skill Categories", key="test_skills"):
                     try:
-                        response = requests.get("http://localhost:5000/api/skills/categories")
+                        response = requests.get("http://localhost:8000/skills/categories")
                         if response.status_code == 200:
                             st.success("✅ Skills API working")
                             data = response.json()
@@ -1017,7 +1017,7 @@ class AdminDashboard:
             with col_skill2:
                 if st.button("Get Career Paths", key="test_career"):
                     try:
-                        response = requests.get("http://localhost:5000/api/career/paths")
+                        response = requests.get("http://localhost:8000/career/paths")
                         if response.status_code == 200:
                             st.success("✅ Career Paths API working")
                             data = response.json()
@@ -1034,20 +1034,20 @@ class AdminDashboard:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.metric("Application Port", "5000", "Unified App")
+            st.metric("Frontend Port", "5000", "Streamlit App")
         
         with col2:
-            st.metric("API Endpoints", "/api/*", "Backend API")
+            st.metric("API Port", "8000", "FastAPI Server")
         
         with col3:
             try:
-                response = requests.get("http://localhost:5000/health", timeout=3)
+                response = requests.get("http://localhost:8000/health", timeout=3)
                 if response.status_code == 200:
-                    st.metric("Server Status", "✅ Online", "Healthy")
+                    st.metric("API Status", "✅ Online", "Healthy")
                 else:
-                    st.metric("Server Status", "⚠️ Issues", f"Status {response.status_code}")
+                    st.metric("API Status", "⚠️ Issues", f"Status {response.status_code}")
             except:
-                st.metric("Server Status", "❌ Offline", "Not reachable")
+                st.metric("API Status", "❌ Offline", "Not reachable")
     
     def _generate_system_report(self):
         """Generate system report"""
