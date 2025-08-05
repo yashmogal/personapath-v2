@@ -201,10 +201,62 @@ class RAGPipeline:
         # Simple keyword-based responses for common queries
         query_lower = query.lower()
         
-        if "data engineer" in query_lower and "analyst" in query_lower:
-            return """Based on typical role definitions:
+        # Software Development roles
+        if "software development" in query_lower or "software developer" in query_lower:
+            return """**Software Development:**
 
-**Data Engineer vs Data Analyst:**
+**What is Software Development?**
+Software development is the process of creating, designing, testing, and maintaining computer programs and applications. It involves writing code to solve problems and create digital solutions.
+
+**Key Responsibilities:**
+- Writing clean, efficient code in various programming languages
+- Debugging and testing software applications
+- Collaborating with teams to design software solutions
+- Maintaining and updating existing software systems
+- Following software development methodologies (Agile, Scrum)
+
+**Essential Skills:**
+- Programming languages (Python, Java, JavaScript, C++, etc.)
+- Problem-solving and logical thinking
+- Version control systems (Git)
+- Database management
+- Software testing and debugging
+- Understanding of algorithms and data structures
+
+**Career Path:**
+Junior Developer → Software Developer → Senior Developer → Team Lead → Engineering Manager
+
+**Typical Salary Range:** $60,000 - $150,000+ depending on experience and location"""
+
+        elif "cashier" in query_lower:
+            return """**Cashier Role:**
+
+**What is a Cashier?**
+A cashier is a retail professional responsible for processing customer transactions, handling payments, and providing customer service at point-of-sale locations.
+
+**Key Responsibilities:**
+- Processing customer purchases and returns
+- Handling cash, credit cards, and digital payments
+- Maintaining accurate cash drawer balances
+- Providing excellent customer service
+- Scanning items and applying discounts/promotions
+- Keeping checkout area clean and organized
+
+**Essential Skills:**
+- Strong mathematical and money-handling skills
+- Excellent customer service abilities
+- Attention to detail and accuracy
+- Communication and interpersonal skills
+- Basic computer and POS system knowledge
+- Ability to work in fast-paced environments
+
+**Career Path:**
+Cashier → Senior Cashier → Shift Supervisor → Assistant Manager → Store Manager
+
+**Typical Salary Range:** $25,000 - $35,000 annually, often with opportunities for advancement"""
+
+        elif "data engineer" in query_lower and "analyst" in query_lower:
+            return """**Data Engineer vs Data Analyst:**
 
 **Data Engineer:**
 - Builds and maintains data pipelines and infrastructure
@@ -221,24 +273,122 @@ class RAGPipeline:
 **Career Path:** Data Analyst → Senior Analyst → Data Engineer → Senior Data Engineer"""
         
         elif "product management" in query_lower or "product manager" in query_lower:
-            return """**Moving to Product Management:**
+            return """**Product Management:**
 
-**Key Skills Needed:**
+**What is Product Management?**
+Product management involves guiding the development, launch, and lifecycle of products to meet customer needs and business objectives.
+
+**Key Responsibilities:**
+- Defining product vision and strategy
+- Conducting market research and user analysis
+- Creating product roadmaps and prioritizing features
+- Coordinating with engineering, design, and marketing teams
+- Analyzing product metrics and user feedback
+
+**Essential Skills:**
 - User research and customer empathy
 - Product roadmapping and prioritization
 - Data analysis and metrics interpretation
 - Cross-functional collaboration
 - Market research and competitive analysis
 
-**Recommended Path:**
-1. Gain customer-facing experience
-2. Learn analytics tools (SQL, Excel, data visualization)
-3. Understand user experience principles
-4. Practice product thinking and strategy
-5. Consider PM certification or courses
-
-**Timeline:** Typically 6-12 months of preparation with relevant experience."""
+**Career Path:**
+Product Analyst → Associate PM → Product Manager → Senior PM → Product Director"""
         
+        elif "data scientist" in query_lower:
+            return """**Data Scientist:**
+
+**What is Data Science?**
+Data science combines statistics, programming, and domain expertise to extract insights from data and solve complex business problems.
+
+**Key Responsibilities:**
+- Analyzing large datasets to identify patterns and trends
+- Building predictive models and machine learning algorithms
+- Creating data visualizations and presentations
+- Collaborating with stakeholders to solve business problems
+- Cleaning and preprocessing data for analysis
+
+**Essential Skills:**
+- Programming (Python, R, SQL)
+- Statistics and mathematics
+- Machine learning and AI techniques
+- Data visualization tools
+- Business acumen and communication
+
+**Career Path:**
+Data Analyst → Junior Data Scientist → Data Scientist → Senior Data Scientist → Principal Data Scientist"""
+
+        elif "web developer" in query_lower or "web development" in query_lower:
+            return """**Web Development:**
+
+**What is Web Development?**
+Web development involves creating websites and web applications using programming languages, frameworks, and tools.
+
+**Key Responsibilities:**
+- Building responsive websites and web applications
+- Writing frontend (HTML, CSS, JavaScript) and backend code
+- Integrating databases and APIs
+- Testing and debugging web applications
+- Optimizing websites for performance and SEO
+
+**Essential Skills:**
+- HTML, CSS, JavaScript
+- Frontend frameworks (React, Vue, Angular)
+- Backend technologies (Node.js, Python, PHP)
+- Database management
+- Version control and deployment
+
+**Career Path:**
+Junior Web Developer → Web Developer → Senior Web Developer → Full Stack Developer → Lead Developer"""
+
+        elif "marketing" in query_lower and ("specialist" in query_lower or "manager" in query_lower):
+            return """**Marketing Roles:**
+
+**Marketing Specialist:**
+- Execute marketing campaigns and initiatives
+- Create content for various marketing channels
+- Analyze campaign performance and metrics
+- Support brand development and promotion
+
+**Marketing Manager:**
+- Develop and implement marketing strategies
+- Manage marketing budgets and resources
+- Lead marketing campaigns and projects
+- Analyze market trends and customer behavior
+
+**Essential Skills:**
+- Digital marketing and social media
+- Content creation and copywriting
+- Data analysis and metrics tracking
+- Project management
+- Creative thinking and strategy
+
+**Career Path:**
+Marketing Specialist → Marketing Manager → Senior Marketing Manager → Marketing Director"""
+
+        elif "human resources" in query_lower or "hr" in query_lower:
+            return """**Human Resources (HR):**
+
+**What is Human Resources?**
+HR professionals manage the employee lifecycle, from recruitment to retirement, ensuring compliance and supporting organizational culture.
+
+**Key Responsibilities:**
+- Recruiting and onboarding new employees
+- Managing employee relations and performance
+- Handling payroll and benefits administration
+- Ensuring legal compliance and policy enforcement
+- Supporting professional development and training
+
+**Essential Skills:**
+- Communication and interpersonal skills
+- Knowledge of employment law and regulations
+- Conflict resolution and problem-solving
+- Data analysis and HRIS systems
+- Organizational and time management
+
+**Career Path:**
+HR Assistant → HR Specialist → HR Generalist → HR Manager → HR Director"""
+
         elif "mentor" in query_lower:
             return """**Finding Mentors:**
 
@@ -252,22 +402,50 @@ I'd recommend connecting with professionals who have made similar career transit
 Consider reaching out with specific questions about their career journey and transition experience."""
         
         else:
+            # Try to extract potential role from query for better response
+            potential_roles = ["developer", "engineer", "analyst", "manager", "designer", "consultant", "coordinator", "specialist", "administrator", "technician"]
+            found_role = None
+            for role in potential_roles:
+                if role in query_lower:
+                    found_role = role
+                    break
+            
+            if found_role:
+                return f"""**{found_role.title()} Role Information:**
+
+I don't have specific details about this role in our database right now, but here's how you can learn more:
+
+**Research Steps:**
+1. **Internal Resources:** Check our company's job portal for current {found_role} positions
+2. **Network:** Connect with current {found_role}s in our organization
+3. **Skills Assessment:** Review job descriptions to identify required skills
+4. **Career Planning:** Consider how this role fits your career trajectory
+
+**General Career Development:**
+- Identify skill gaps between your current role and target position
+- Seek stretch assignments that align with the {found_role} role
+- Consider relevant training, certifications, or courses
+- Build relationships with people in that department
+
+Would you like me to help you create a development plan for transitioning to a {found_role} role?"""
+            
             return f"""I understand you're asking about: "{query}"
 
-While I don't have access to the full job role database right now, I can help with general career guidance. Here are some suggestions:
+I don't have specific information about this role in our database right now. Here are some ways to get more detailed information:
 
 **For Role Exploration:**
-- Look at internal job postings to understand requirements
-- Connect with people in roles you're interested in
-- Identify skill gaps between your current and target role
+- Check our internal job portal for current openings and descriptions
+- Connect with employees currently in similar roles
+- Review the skills and qualifications typically required
+- Understand the career progression path
 
 **For Career Development:**
-- Create a skill development plan
-- Seek stretch assignments in your current role
-- Consider relevant training or certifications
-- Build relationships across departments
+- Create a skill development plan based on role requirements
+- Seek stretch assignments relevant to your target role
+- Consider relevant training, certifications, or courses
+- Build professional relationships in that area
 
-Would you like me to elaborate on any of these areas?"""
+Would you like me to help you with career planning strategies or skill development recommendations?"""
     
     def get_similar_roles(self, query: str, k: int = 5) -> List[Dict]:
         """Find similar roles using semantic search"""
