@@ -67,40 +67,76 @@ def main():
 
 def show_login_page():
     """Display modern login interface"""
-    # Center the login form
+    # Hide sidebar on login page
+    st.markdown("""
+    <style>
+        .css-1d391kg {display: none;}
+        .stSidebar {display: none;}
+        section[data-testid="stSidebar"] {display: none;}
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Center the login form with better spacing
+    st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        # Login card with modern styling
+        # Enhanced login card with modern styling
         st.markdown("""
-        <div class="login-card">
-            <div style="text-align: center; margin-bottom: 2rem;">
-                <h2 style="color: #1f2937; margin: 0 0 0.5rem 0; font-weight: 700;">
-                    🔐 Welcome Back
+        <div style="background: white; padding: 3rem; border-radius: 20px; 
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                    border: 1px solid #f3f4f6; margin-bottom: 2rem;">
+            <div style="text-align: center; margin-bottom: 2.5rem;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">🎯</div>
+                <h1 style="color: #111827; margin: 0 0 0.5rem 0; font-weight: 800; font-size: 2rem;">
+                    PersonaPath
+                </h1>
+                <h2 style="color: #1f2937; margin: 0 0 0.5rem 0; font-weight: 600; font-size: 1.5rem;">
+                    Welcome Back
                 </h2>
-                <p style="color: #6b7280; margin: 0; font-size: 1rem;">
-                    Sign in to your PersonaPath account
+                <p style="color: #6b7280; margin: 0; font-size: 1.1rem;">
+                    Sign in to access your career intelligence platform
                 </p>
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        # OAuth buttons (visual only for now)
-        st.markdown(create_oauth_buttons(), unsafe_allow_html=True)
-        
-        # Login form
+        # Enhanced login form
         with st.form("login_form", clear_on_submit=False):
-            st.markdown("#### Enter your credentials")
-            username = st.text_input("Username", placeholder="Enter your username")
-            password = st.text_input("Password", type="password", placeholder="Enter your password")
+            st.markdown("""
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="color: #374151; margin-bottom: 1rem; font-weight: 600;">
+                    🔐 Sign In to Your Account
+                </h3>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            username = st.text_input(
+                "Username", 
+                placeholder="Enter your username",
+                help="Use demo_employee, demo_hr, or demo_admin for quick testing"
+            )
+            password = st.text_input(
+                "Password", 
+                type="password", 
+                placeholder="Enter your password",
+                help="Use 'demo123' for demo accounts"
+            )
             
             col_login, col_register = st.columns(2)
             
             with col_login:
-                login_clicked = st.form_submit_button("Sign In", use_container_width=True, type="primary")
+                login_clicked = st.form_submit_button(
+                    "🚀 Sign In", 
+                    use_container_width=True, 
+                    type="primary"
+                )
             
             with col_register:
-                register_clicked = st.form_submit_button("Create Account", use_container_width=True)
+                register_clicked = st.form_submit_button(
+                    "📝 Create Account", 
+                    use_container_width=True
+                )
         
         # Handle login
         if login_clicked and username and password:
@@ -110,7 +146,7 @@ def show_login_page():
                 st.session_state.user_id = user['id']
                 st.session_state.username = user['username']
                 st.session_state.user_role = user['role']
-                st.success(f"Welcome back, {username}! 🎉")
+                st.success(f"🎉 Welcome back, {username}! Redirecting to your {user['role']} dashboard...")
                 st.rerun()
             else:
                 st.error("❌ Invalid username or password. Please try again.")
@@ -118,57 +154,136 @@ def show_login_page():
         # Handle registration
         if register_clicked:
             if username and password:
-                st.markdown("#### Select your role")
-                role = st.selectbox("Role", ["Employee", "HR Manager", "Admin"], key="role_select")
+                st.markdown("""
+                <div style="background: #f8fafc; padding: 1.5rem; border-radius: 12px; margin: 1rem 0;">
+                    <h4 style="color: #374151; margin-bottom: 1rem;">👔 Select Your Role</h4>
+                </div>
+                """, unsafe_allow_html=True)
                 
-                if st.button("Complete Registration", use_container_width=True, type="primary"):
+                role = st.selectbox(
+                    "Choose your role in the organization:",
+                    ["Employee", "HR Manager", "Admin"], 
+                    key="role_select",
+                    help="Select the role that best matches your position"
+                )
+                
+                if st.button("✅ Complete Registration", use_container_width=True, type="primary"):
                     if auth_manager.register_user(username, password, role):
-                        st.success("✅ Registration successful! Please sign in with your new account.")
+                        st.success("🎉 Registration successful! Please sign in with your new account.")
+                        st.balloons()
                     else:
                         st.error("❌ Username already exists. Please choose a different username.")
             else:
                 st.warning("⚠️ Please fill in both username and password to register.")
         
-        # Demo accounts section
+        # Enhanced demo accounts section
         st.markdown("---")
-        with st.expander("🚀 Quick Demo Access"):
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    padding: 2rem; border-radius: 16px; margin: 2rem 0; color: white;">
+            <h3 style="margin: 0 0 1rem 0; color: white; font-weight: 600;">
+                🚀 Try PersonaPath Now
+            </h3>
+            <p style="margin: 0 0 1.5rem 0; opacity: 0.9;">
+                Experience different user perspectives with our demo accounts
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Demo account cards
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
             st.markdown("""
-            **Try these demo accounts:**
-            
-            **Employee Demo:**
-            - Username: `demo_employee`
-            - Password: `demo123`
-            
-            **HR Manager Demo:**
-            - Username: `demo_hr`
-            - Password: `demo123`
-            
-            **Admin Demo:**
-            - Username: `demo_admin`
-            - Password: `demo123`
-            """)
-            
-            if st.button("🎭 Create Demo Accounts", use_container_width=True):
-                # Create demo accounts
-                demo_accounts = [
-                    ("demo_employee", "demo123", "Employee"),
-                    ("demo_hr", "demo123", "HR Manager"),
-                    ("demo_admin", "demo123", "Admin")
-                ]
-                
-                created_count = 0
-                for username, password, role in demo_accounts:
-                    if auth_manager.register_user(username, password, role):
-                        created_count += 1
-                
-                if created_count > 0:
-                    st.success(f"✅ Created {created_count} demo accounts! You can now log in.")
-                else:
-                    st.info("ℹ️ Demo accounts already exist. You can log in with them.")
+            <div style="background: #f0f9ff; padding: 1.5rem; border-radius: 12px; text-align: center; border: 2px solid #0ea5e9;">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">👨‍💼</div>
+                <h4 style="color: #0c4a6e; margin: 0 0 0.5rem 0;">Employee</h4>
+                <p style="color: #075985; margin: 0; font-size: 0.9rem;">demo_employee / demo123</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+            <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 12px; text-align: center; border: 2px solid #22c55e;">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">👩‍💼</div>
+                <h4 style="color: #14532d; margin: 0 0 0.5rem 0;">HR Manager</h4>
+                <p style="color: #166534; margin: 0; font-size: 0.9rem;">demo_hr / demo123</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown("""
+            <div style="background: #fef3f2; padding: 1.5rem; border-radius: 12px; text-align: center; border: 2px solid #ef4444;">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">👨‍💻</div>
+                <h4 style="color: #7f1d1d; margin: 0 0 0.5rem 0;">Admin</h4>
+                <p style="color: #991b1b; margin: 0; font-size: 0.9rem;">demo_admin / demo123</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Quick demo login buttons
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("🧑‍💼 Login as Employee", use_container_width=True):
+                user = auth_manager.authenticate_user("demo_employee", "demo123")
+                if user:
+                    st.session_state.authenticated = True
+                    st.session_state.user_id = user['id']
+                    st.session_state.username = user['username']
+                    st.session_state.user_role = user['role']
+                    st.rerun()
+        
+        with col2:
+            if st.button("👩‍💼 Login as HR", use_container_width=True):
+                user = auth_manager.authenticate_user("demo_hr", "demo123")
+                if user:
+                    st.session_state.authenticated = True
+                    st.session_state.user_id = user['id']
+                    st.session_state.username = user['username']
+                    st.session_state.user_role = user['role']
+                    st.rerun()
+        
+        with col3:
+            if st.button("👨‍💻 Login as Admin", use_container_width=True):
+                user = auth_manager.authenticate_user("demo_admin", "demo123")
+                if user:
+                    st.session_state.authenticated = True
+                    st.session_state.user_id = user['id']
+                    st.session_state.username = user['username']
+                    st.session_state.user_role = user['role']
+                    st.rerun()
+        
+        # Feature highlights
+        st.markdown("---")
+        st.markdown("""
+        <div style="text-align: center; margin: 2rem 0;">
+            <h3 style="color: #374151; margin-bottom: 1.5rem;">✨ Platform Features</h3>
+            <div style="display: flex; justify-content: space-around; flex-wrap: wrap;">
+                <div style="margin: 0.5rem;">
+                    <div style="font-size: 1.5rem;">💬</div>
+                    <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">AI Chat Assistant</p>
+                </div>
+                <div style="margin: 0.5rem;">
+                    <div style="font-size: 1.5rem;">📊</div>
+                    <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">Skill Analysis</p>
+                </div>
+                <div style="margin: 0.5rem;">
+                    <div style="font-size: 1.5rem;">🗺️</div>
+                    <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">Career Roadmaps</p>
+                </div>
+                <div style="margin: 0.5rem;">
+                    <div style="font-size: 1.5rem;">👥</div>
+                    <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">Mentorship</p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 def show_dashboard():
     """Show role-based dashboard with modern styling"""
-    # Modern sidebar with user info
+    # Modern sidebar with user info - only show when authenticated
     with st.sidebar:
         # User profile section
         st.markdown(f"""
@@ -182,26 +297,56 @@ def show_dashboard():
         </div>
         """, unsafe_allow_html=True)
         
-        # Navigation menu
-        st.markdown("### 📊 Dashboard")
+        # Navigation menu - role-specific content
+        st.markdown("### 📊 Dashboard Navigation")
         
-        # Role-specific navigation
+        # Show only relevant navigation based on user role
         if st.session_state.user_role == "Employee":
-            st.markdown("- 💬 Chat Assistant")
-            st.markdown("- 🎯 Career Goals")
-            st.markdown("- 📈 Skill Analysis")
-            st.markdown("- 🚀 Career Roadmap")
-            st.markdown("- 👥 Mentorship")
+            st.markdown("""
+            **Available Features:**
+            - 💬 Chat Assistant
+            - 🔍 Role Explorer  
+            - 📊 Skill Analysis
+            - 🗺️ Career Roadmap
+            - 👥 Find Mentors
+            """)
         elif st.session_state.user_role == "HR Manager":
-            st.markdown("- 📄 Document Upload")
-            st.markdown("- 🔍 Role Management")
-            st.markdown("- 📊 HR Analytics")
-            st.markdown("- 👥 Employee Insights")
+            st.markdown("""
+            **Available Features:**
+            - 📁 Upload Role Documents
+            - 📋 Manage Job Roles
+            - 📊 HR Analytics
+            - 🎯 Role Insights
+            """)
         elif st.session_state.user_role == "Admin":
-            st.markdown("- 📈 System Analytics")
-            st.markdown("- 👥 User Management")
-            st.markdown("- 🔧 System Settings")
-            st.markdown("- 📊 Usage Reports")
+            st.markdown("""
+            **Available Features:**
+            - 📊 System Overview
+            - 👥 User Management
+            - 📋 Content Management
+            - 📈 Advanced Analytics
+            - ⚙️ System Settings
+            """)
+        
+        st.markdown("---")
+        
+        # Quick actions based on role
+        st.markdown("### ⚡ Quick Actions")
+        if st.session_state.user_role == "Employee":
+            if st.button("💬 New Chat", use_container_width=True):
+                st.info("Navigate to Chat Assistant tab")
+            if st.button("🔍 Explore Roles", use_container_width=True):
+                st.info("Navigate to Role Explorer tab")
+        elif st.session_state.user_role == "HR Manager":
+            if st.button("📁 Upload Document", use_container_width=True):
+                st.info("Navigate to Upload Roles tab")
+            if st.button("📊 View Analytics", use_container_width=True):
+                st.info("Navigate to Analytics tab")
+        elif st.session_state.user_role == "Admin":
+            if st.button("👥 Manage Users", use_container_width=True):
+                st.info("Navigate to User Management tab")
+            if st.button("📊 View Analytics", use_container_width=True):
+                st.info("Navigate to System Overview tab")
         
         st.markdown("---")
         
