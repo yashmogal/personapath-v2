@@ -1,0 +1,100 @@
+? User context memory
+? Testing & Quality Assurance
+? Unit tests for backend APIs
+? Retrieval QA precision metrics
+??? Frontend UX usability tests
+? Performance Benchmarks:
+? Embedding latency
+? LLM response time
+? Security audits on auth/upload paths
+? Success Metrics (KPIs)
+? KPI	? Description
+Active Users	Engagement across workforce
+Role Queries per Week	Usage frequency
+Upload Completion Rate	HR onboarding success
+Skill Gap Maps	Personalization relevance
+Mentorship Requests	Insight-to-action conversion
+Top Queried Roles	Career trend analytics
+Module CTR	Learning engagement
+Response Satisfaction	Feedback via thumbs/stars in chat UI
+? Sample Queries & Responses
+? Query Example	? Response Preview
+Can a designer transition to product owner?	? Yes, with stakeholder mgmt and product thinking skills.
+What tools does a machine learning engineer use?	? Python, TensorFlow, MLFlow?
+Which internal mentor helps with marketing roles?	??? Try Priya S. ? transitioned from Sales to Marketing.
+? This PRD supports the phased development from an internal role Q&A tool to a full-fledged personalized AI mentor.
+
+
+My app is working give prompt to replit agent to create a worlds best ui for the app according to the prd provided
+
+
+ChatGPT said:
+Here's a Replit AI Agent prompt you can use to generate a world-class UI for your CareerQ + PersonaPath app based on the detailed PRD you provided:
+
+â Prompt for Replit Agent (UI Design from PRD)
+You are an expert React + TailwindCSS developer.
+Build a world-class, modern, clean, and responsive frontend UI for the internal career intelligence assistant CareerQ and its capstone extension PersonaPath as described in the PRD below.
+
+â Use React + TailwindCSS only (no TypeScript).
+â Build each feature and component as reusable functional components.
+â Ensure responsiveness and clean UX for desktop and mobile.
+â Implement OAuth login UI (Google/Microsoft) and role-based access control views.
+â Use placeholder functions for backend/API calls.
+â Include:
+
+A chat-based Q&A interface with AI responses for job role questions
+
+A role upload panel (PDF, DOCX, TXT) with metadata tagging (HR only)
+
+A role search panel with suggestive dropdown and snippet previews
+
+Personalized dashboard for employees showing:
+
+Saved goals
+
+Skill gap chart (bar or radar)
+
+Career roadmap timeline (lateral and upward roles)
+
+Mentorship panel with recommended mentors and LMS modules
+
+Admin analytics dashboard with:
+
+Role query trends
+
+Departmental usage stats
+
+Unanswered questions
+
+Clean landing page for app description
+
+NavBar and Footer with internal branding look
+
+ð¯ Prioritize elegant layout, visual clarity, and consistent design system
+ð¨ Use subtle gradients, icons, shadows, transitions â professional enterprise feel
+
+ð§ All components should be easily integrated with FastAPI backend.
+
+ð PRD Summary:
+
+Product Name: CareerQ / PersonaPath
+
+Core: Chat interface to query job roles via LangChain + Qwen
+
+Upload: HR uploads PDF/DOCX job docs â parsed, chunked, embedded
+
+Q&A: Employee asks career questions â vector search â LLM answer
+
+PersonaPath Features:
+
+Personalized roadmap, goals, memory
+
+Skill gap visualization
+
+Mentorship & LMS recommendations
+
+Admin analytics dashboard
+
+Auth: OAuth (Google/Microsoft), role-based permissions
+
+UI components must align with career intelligence and mentorship vision
