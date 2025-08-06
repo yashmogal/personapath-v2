@@ -201,16 +201,14 @@ Career Transition Information:
             print(f"[DEBUG] LLM exists: {self.llm is not None}")
 
             # Always try database search first for role-related queries
-            db_response = self._get_database_role_info(query)
+            db_response = self._get_database_role_info(query, user_id)
             if db_response:
                 print(f"[DEBUG] Found database response for query")
-                # Save to chat history
-                self.db_manager.save_chat_history(user_id=user_id, query=query, response=db_response)
                 return db_response
 
             if not self.vectorstore:
                 print(f"[DEBUG] No vector store, using enhanced fallback")
-                return self._enhanced_fallback_response(query)
+                return self._enhanced_fallback_response(query, user_id)
 
             # Try vector similarity search with different approaches
             relevant_docs = []
@@ -289,7 +287,7 @@ Career Transition Information:
                     # If the response is too generic or short, enhance it with database information
                     if len(response.split()) < 20 or "I don't" in response or "I can't" in response or "sorry" in response.lower():
                         print(f"[DEBUG] Response too generic, trying database enhancement")
-                        enhanced_response = self._enhanced_fallback_response(query)
+                        enhanced_response = self._enhanced_fallback_response(query, user_id)
                         if enhanced_response:
                             response = enhanced_response
 
@@ -320,7 +318,7 @@ Career Transition Information:
 
             # Final fallback
             print(f"[DEBUG] Using final enhanced fallback")
-            fallback_response = self._enhanced_fallback_response(query)
+            fallback_response = self._enhanced_fallback_response(query, user_id)
             self.db_manager.save_chat_history(user_id=user_id, query=query, response=fallback_response)
             return fallback_response
 
@@ -328,7 +326,7 @@ Career Transition Information:
             print(f"[DEBUG] Exception in query_documents: {e}")
             st.error(f"Error in RAG pipeline: {e}")
             # Use enhanced fallback instead of generic error
-            fallback_response = self._enhanced_fallback_response(query)
+            fallback_response = self._enhanced_fallback_response(query, user_id)
 
             # Still save the interaction
             self.db_manager.save_chat_history(
@@ -926,10 +924,11 @@ I don't have specific information about this role in our database right now. Her
 
 Would you like me to help you with career planning strategies or skill development recommendations?"""
 
-    def _get_database_role_info(self, query: str) -> Optional[str]:
+    def _get_database_role_info(self, query: str, user_id: int = None) -> Optional[str]:
         """Get role information directly from database"""
         try:
             print(f"[DEBUG] Searching database for query: {query}")
+            query_lower = query.lower()
 
             # Enhanced role keyword mapping - need to match actual database titles
             role_keywords = {
@@ -953,12 +952,18 @@ Would you like me to help you with career planning strategies or skill developme
                 'marketing': ['marketing', 'marketing specialist'],
                 'sales': ['sales', 'sales representative'],
                 'hr': ['human resources', 'hr'],
-                'human resources': ['human resources', 'hr']
+                'human resources': ['human resources', 'hr'],
+                'designer': ['designer', 'ux', 'ui', 'design'],
+                'ux designer': ['ux', 'designer', 'user experience'],
+                'ui designer': ['ui', 'designer', 'user interface'],
+                'product designer': ['product designer', 'design'],
+                'engineer': ['engineer', 'engineering'],
+                'qa': ['qa', 'quality assurance', 'tester'],
+                'manager': ['manager', 'management']
             }
 
             # Find the best matching role keywords
             search_terms = set()
-            query_lower = query.lower()
 
             # Direct keyword matching
             for keyword, variations in role_keywords.items():
@@ -969,10 +974,12 @@ Would you like me to help you with career planning strategies or skill developme
             # Add original query words that are meaningful (clean punctuation)
             import re
             words = re.findall(r'\b\w+\b', query_lower)  # Extract only word characters
-            meaningful_words = [w for w in words if len(w) > 2 and w not in ['what', 'is', 'the', 'and', 'or', 'how', 'to', 'for', 'from', 'with', 'need', 'skills', 'get']]
+            meaningful_words = [w for w in words if len(w) > 2 and w not in ['what', 'is', 'the', 'and', 'or', 'how', 'to', 'for', 'from', 'with', 'need', 'skills', 'get', 'scope', 'future', 'salary']]
             search_terms.update(meaningful_words)
 
-            # Special case mapping for common variations
+            # Special case mappings for common variations
+            if 'ui/ux' in query_lower or ('ui' in query_lower and 'ux' in query_lower):
+                search_terms.update(['ux', 'ui', 'designer'])
             if 'software developer' in query_lower or ('software' in query_lower and 'developer' in query_lower):
                 search_terms.add('sde')
             if 'developer' in query_lower:
@@ -1007,13 +1014,14 @@ Would you like me to help you with career planning strategies or skill developme
                 response = self._generate_role_specific_response(query, selected_role)
                 print(f"[DEBUG] Found database response for query")
 
-                # Save to chat history
-                self.db_manager.save_chat_history(
-                    user_id=user_id,
-                    query=query,
-                    response=response,
-                    role_context=selected_role['title']
-                )
+                # Save to chat history if user_id provided
+                if user_id:
+                    self.db_manager.save_chat_history(
+                        user_id=user_id,
+                        query=query,
+                        response=response,
+                        role_context=selected_role['title']
+                    )
 
                 return response
 
@@ -1193,11 +1201,11 @@ Would you like me to help you with career planning strategies or skill developme
         except Exception as e:
             return original_response
 
-    def _enhanced_fallback_response(self, query: str) -> str:
+    def _enhanced_fallback_response(self, query: str, user_id: int = None) -> str:
         """Enhanced fallback that combines database info with generic responses"""
         try:
             # First try to get specific database information
-            db_response = self._get_database_role_info(query)
+            db_response = self._get_database_role_info(query, user_id)
             if db_response:
                 return db_response
 
@@ -1448,6 +1456,45 @@ Would you like me to help you with career planning strategies or skill developme
 - **User Experience Focus:** Integration with UX/UI design processes
 - **AI-Powered Products:** Building products with embedded AI capabilities
 - **Cross-Platform Strategy:** Managing products across multiple platforms"""
+
+        elif 'designer' in role_title.lower() or 'ux' in role_title.lower() or 'ui' in role_title.lower():
+            response += """
+1. **Entry Level** → Junior UX/UI Designer (0-2 years)
+2. **Mid-Level** → UX/UI Designer (2-4 years)
+3. **Senior Level** → Senior UX Designer/Lead Designer (4-7 years)
+4. **Specialization** → Product Designer, UX Researcher, Design Systems Lead
+5. **Leadership** → Design Manager → Design Director → VP Design
+
+**Future of UI/UX Design:**
+- **AI-Powered Design Tools:** Automated design generation and optimization
+- **Voice and Conversational Interfaces:** Designing for voice assistants and chatbots
+- **AR/VR Design:** Creating immersive experiences for augmented and virtual reality
+- **Accessibility-First Design:** Universal design principles becoming standard
+- **Design Systems at Scale:** Building and maintaining comprehensive design systems
+- **Data-Driven Design:** Using analytics and user research to inform design decisions
+- **Cross-Platform Consistency:** Designing cohesive experiences across all devices
+- **Ethical Design:** Focus on user privacy, mental health, and inclusive design
+
+**Emerging Skills:**
+- **Prototyping with Code:** Understanding frontend development basics
+- **Design Research:** Advanced user research and testing methodologies
+- **Business Strategy:** Understanding business goals and market needs
+- **Design Operations:** Streamlining design processes and team efficiency"""
+
+        elif 'qa' in role_title.lower() or 'quality assurance' in role_title.lower() or 'tester' in role_title.lower():
+            response += """
+1. **Entry Level** → QA Tester/Junior QA Engineer (0-2 years)
+2. **Mid-Level** → QA Engineer/Test Analyst (2-4 years)
+3. **Senior Level** → Senior QA Engineer/Test Lead (4-7 years)
+4. **Specialization** → Automation Engineer, Performance Tester, Security Tester
+5. **Leadership** → QA Manager → QA Director
+
+**Future of Quality Assurance:**
+- **Test Automation:** Increased focus on automated testing frameworks
+- **AI in Testing:** Machine learning for test case generation and bug detection
+- **Shift-Left Testing:** Earlier involvement in the development process
+- **Performance Engineering:** Integrated performance testing throughout development
+- **Security Testing:** Growing emphasis on security and vulnerability testing"""
 
         elif "human resources" in query_lower or "hr" in query_lower:
             if "future" in query_lower or "prospects" in query_lower or "scope" in query_lower:
