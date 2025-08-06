@@ -1,5 +1,5 @@
 import streamlit as st
-from core.personapath_rag import PersonaPathRAG
+from core.fast_personapath import FastPersonaPath
 from core.skill_analyzer import SkillAnalyzer
 from core.career_planner import CareerPlanner
 from core.mentor_system import MentorSystem
@@ -13,7 +13,7 @@ class EmployeeDashboard:
     
     def __init__(self, db_manager):
         self.db_manager = db_manager
-        self.personapath = PersonaPathRAG(db_manager)
+        self.personapath = FastPersonaPath(db_manager)
         self.skill_analyzer = SkillAnalyzer(db_manager)
         self.career_planner = CareerPlanner(db_manager)
         self.mentor_system = MentorSystem(db_manager)
@@ -174,7 +174,7 @@ class EmployeeDashboard:
         with col1:
             if st.button("🔄 Refresh Knowledge Base", help="Update the AI's knowledge with latest role information"):
                 with st.spinner("Refreshing knowledge base..."):
-                    result = self.personapath.refresh_knowledge_base()
+                    result = self.personapath.refresh_cache()
                     st.success(result)
         
         with col2:
