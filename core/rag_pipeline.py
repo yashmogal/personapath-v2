@@ -103,32 +103,74 @@ class RAGPipeline:
                 st.warning("Embeddings not available. Documents processed but not embedded.")
                 return True
 
-            # Convert documents to LangChain Document format
+            # Convert documents to LangChain Document format with enhanced content
             langchain_docs = []
             for doc in documents:
+                # Create comprehensive content for better retrieval
+                title = doc.get('title', '')
+                department = doc.get('department', '')
+                level = doc.get('level', '')
+                description = doc.get('description', '')
+                skills = doc.get('skills_required', '')
+                
+                # Enhanced content with multiple phrasings for better matching
                 content = f"""
-                Title: {doc.get('title', '')}
-                Department: {doc.get('department', '')}
-                Level: {doc.get('level', '')}
-                Description: {doc.get('description', '')}
-                Skills Required: {doc.get('skills_required', '')}
-                """
+Job Role: {title}
+Position: {title}
+Role Title: {title}
+Department: {department}
+Career Level: {level}
+Experience Level: {level}
+
+Role Description:
+{description}
+
+Key Responsibilities and Description:
+{description}
+
+Required Skills and Qualifications:
+{skills}
+
+Skills Needed:
+{skills}
+
+Technical Requirements:
+{skills}
+
+This is a {title} position in the {department} department at {level} level.
+What is {title}? {description}
+How to become {title}? You need skills like: {skills}
+Career path for {title}: This role is at {level} level in {department}.
+Requirements for {title}: {skills}
+"""
+
+                # Add role transition context
+                content += f"""
+
+Career Transition Information:
+- Transitioning to {title}: You would need {skills}
+- Moving from other roles to {title}: Consider developing {skills}
+- Career change to {title}: This role requires {skills} and offers opportunities in {department}
+- Switch to {title}: Key skills include {skills}
+"""
 
                 langchain_docs.append(Document(
-                    page_content=content,
+                    page_content=content.strip(),
                     metadata={
                         'id': doc.get('id'),
-                        'title': doc.get('title'),
-                        'department': doc.get('department'),
-                        'level': doc.get('level')
+                        'title': title,
+                        'department': department,
+                        'level': level,
+                        'role_type': title.lower()
                     }
                 ))
 
-            # Split documents into chunks
+            # Split documents into chunks with better overlap for continuity
             text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=1000,
-                chunk_overlap=200,
-                length_function=len
+                chunk_size=800,  # Smaller chunks for better precision
+                chunk_overlap=300,  # More overlap for better context
+                length_function=len,
+                separators=["\n\n", "\n", ".", " ", ""]
             )
 
             chunks = text_splitter.split_documents(langchain_docs)
@@ -139,8 +181,10 @@ class RAGPipeline:
                     chunks, 
                     self.embeddings
                 )
+                st.info(f"Created new vector store with {len(chunks)} chunks from {len(documents)} documents")
             else:
                 self.vectorstore.add_documents(chunks)
+                st.info(f"Added {len(chunks)} new chunks to existing vector store")
 
             return True
 
@@ -155,6 +199,30 @@ class RAGPipeline:
                 # Return a helpful response even without full RAG
                 return self._fallback_response(query)
 
+            # First, try to get relevant documents using vector search
+            relevant_docs = self.vectorstore.similarity_search(query, k=k*2)  # Get more documents initially
+            
+            # If no relevant documents found, try broader search terms
+            if not relevant_docs or len(relevant_docs) == 0:
+                # Extract key terms from query for broader search
+                key_terms = self._extract_key_terms(query)
+                for term in key_terms:
+                    term_docs = self.vectorstore.similarity_search(term, k=2)
+                    relevant_docs.extend(term_docs)
+                
+                # Remove duplicates
+                seen_content = set()
+                unique_docs = []
+                for doc in relevant_docs:
+                    if doc.page_content not in seen_content:
+                        unique_docs.append(doc)
+                        seen_content.add(doc.page_content)
+                relevant_docs = unique_docs[:k]
+
+            # If we still don't have documents, use fallback with database info
+            if not relevant_docs:
+                return self._enhanced_fallback_response(query)
+
             # Create conversational retrieval chain
             chain = ConversationalRetrievalChain.from_llm(
                 llm=self.llm,
@@ -163,9 +231,18 @@ class RAGPipeline:
                 return_source_documents=True
             )
 
+            # Enhance the query with context if it's a transition query
+            enhanced_query = self._enhance_query_context(query)
+
             # Get response
-            result = chain({"question": query})
+            result = chain({"question": enhanced_query})
             response = result["answer"]
+
+            # If the response is too generic or short, enhance it with database information
+            if len(response.split()) < 20 or "I don't" in response or "I can't" in response:
+                enhanced_response = self._enhance_response_with_db_info(query, response)
+                if enhanced_response:
+                    response = enhanced_response
 
             # Save to chat history
             self.db_manager.save_chat_history(
@@ -178,22 +255,28 @@ class RAGPipeline:
             self.db_manager.log_analytics_event(
                 event_type="chat_query",
                 user_id=user_id,
-                metadata=json.dumps({"query_length": len(query)})
+                metadata=json.dumps({
+                    "query_length": len(query),
+                    "docs_found": len(relevant_docs),
+                    "response_length": len(response)
+                })
             )
 
             return response
 
         except Exception as e:
-            error_msg = f"I apologize, but I encountered an error processing your query: {str(e)}"
-
+            st.error(f"Error in RAG pipeline: {e}")
+            # Use enhanced fallback instead of generic error
+            fallback_response = self._enhanced_fallback_response(query)
+            
             # Still save the interaction
             self.db_manager.save_chat_history(
                 user_id=user_id,
                 query=query,
-                response=error_msg
+                response=fallback_response
             )
 
-            return error_msg
+            return fallback_response
 
     def _handle_career_transition(self, query_lower: str) -> str:
         """Handle career transition queries with database role information"""
@@ -941,13 +1024,92 @@ Ask me specific questions like:
             st.error(f"Error finding similar roles: {e}")
             return self.db_manager.search_job_roles(query)
 
+    def _extract_key_terms(self, query: str) -> List[str]:
+        """Extract key terms from query for broader search"""
+        query_lower = query.lower()
+        key_terms = []
+        
+        # Common role-related terms
+        role_terms = [
+            'software developer', 'software engineer', 'developer', 'programmer',
+            'cashier', 'retail', 'data scientist', 'data analyst', 'product manager',
+            'marketing', 'sales', 'hr', 'human resources', 'finance', 'analyst'
+        ]
+        
+        for term in role_terms:
+            if term in query_lower:
+                key_terms.append(term)
+        
+        # Add individual words that might be relevant
+        words = query_lower.split()
+        relevant_words = [w for w in words if len(w) > 3 and w not in ['what', 'how', 'from', 'to', 'the', 'and', 'or']]
+        key_terms.extend(relevant_words[:3])  # Limit to avoid too broad search
+        
+        return key_terms
+
+    def _enhance_query_context(self, query: str) -> str:
+        """Enhance query with additional context for better retrieval"""
+        query_lower = query.lower()
+        
+        # If it's a transition query, make it more explicit
+        if any(phrase in query_lower for phrase in ['switch from', 'transition from', 'change from', 'move from']):
+            return f"{query} Please provide detailed information about both roles including skills, responsibilities, and career path guidance."
+        
+        # If asking about a specific role, request comprehensive info
+        if any(phrase in query_lower for phrase in ['what is', 'tell me about', 'describe']):
+            return f"{query} Please provide comprehensive information including responsibilities, skills, career progression, and related roles."
+        
+        return query
+
+    def _enhance_response_with_db_info(self, query: str, original_response: str) -> str:
+        """Enhance response with database information if needed"""
+        try:
+            # Get database info that might be relevant
+            db_info = self._get_database_role_info(query)
+            if db_info:
+                return db_info
+            
+            # If it's a transition query, use the specialized handler
+            query_lower = query.lower()
+            if any(phrase in query_lower for phrase in ['switch', 'transition', 'change', 'move']):
+                transition_response = self._handle_career_transition(query_lower)
+                if len(transition_response.split()) > len(original_response.split()):
+                    return transition_response
+            
+            return original_response
+            
+        except Exception as e:
+            return original_response
+
+    def _enhanced_fallback_response(self, query: str) -> str:
+        """Enhanced fallback that combines database info with generic responses"""
+        try:
+            # First try to get specific database information
+            db_response = self._get_database_role_info(query)
+            if db_response:
+                return db_response
+            
+            # Then try the career transition handler
+            query_lower = query.lower()
+            if any(phrase in query_lower for phrase in ['switch', 'transition', 'change', 'move', 'from', 'to']):
+                return self._handle_career_transition(query_lower)
+            
+            # Finally, use the standard fallback
+            return self._fallback_response(query)
+            
+        except Exception as e:
+            return self._fallback_response(query)
+
     def refresh_vectorstore(self):
         """Refresh vector store with latest job roles"""
         try:
             roles = self.db_manager.get_job_roles()
             if roles:
-                self.process_documents(roles)
-                st.success("Knowledge base updated successfully!")
+                success = self.process_documents(roles)
+                if success:
+                    st.success(f"Knowledge base updated successfully with {len(roles)} roles!")
+                else:
+                    st.warning("Knowledge base update completed with some issues.")
             else:
                 st.info("No job roles found to process.")
 

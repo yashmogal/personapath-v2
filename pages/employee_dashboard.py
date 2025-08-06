@@ -166,6 +166,18 @@ class EmployeeDashboard:
                     st.session_state.chat_messages.append({"role": "assistant", "content": response})
                     st.rerun()
         
+        # Knowledge base management
+        st.divider()
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Refresh Knowledge Base", help="Update the AI's knowledge with latest role information"):
+                with st.spinner("Refreshing knowledge base..."):
+                    self.rag_pipeline.refresh_vectorstore()
+        
+        with col2:
+            roles_count = len(self.db_manager.get_job_roles())
+            st.metric("Roles in Knowledge Base", roles_count)
+
         # Chat history section with better management
         st.divider()
         st.subheader("📜 Previous Conversations")
