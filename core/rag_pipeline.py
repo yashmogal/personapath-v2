@@ -887,14 +887,15 @@ Would you like me to help you with career planning strategies or skill developme
         try:
             print(f"[DEBUG] Searching database for query: {query}")
             
-            # Enhanced role keyword mapping
+            # Enhanced role keyword mapping - need to match actual database titles
             role_keywords = {
-                'sde': ['software developer', 'software development', 'developer'],
-                'software development engineer': ['software developer', 'software development', 'developer'],
-                'software engineer': ['software developer', 'software development', 'developer'],
-                'developer': ['software developer', 'software development', 'developer'],
-                'programming': ['software developer', 'software development', 'developer'],
-                'software development': ['software developer', 'software development', 'developer'],
+                'sde': ['sde', 'software development engineer', 'software developer', 'software development', 'developer', 'programming'],
+                'software development engineer': ['sde', 'software developer', 'software development', 'developer'],
+                'software engineer': ['sde', 'software developer', 'software development', 'developer'], 
+                'developer': ['sde', 'software developer', 'software development', 'developer'],
+                'programming': ['sde', 'software developer', 'software development', 'developer'],
+                'software development': ['sde', 'software developer', 'software development', 'developer'],
+                'software developer': ['sde', 'software developer', 'software development', 'developer'],
                 'data analyst': ['data analyst', 'data analysis', 'analyst'],
                 'data scientist': ['data scientist', 'data science'],
                 'data analysis': ['data analyst', 'data analysis', 'analyst'],
@@ -921,10 +922,19 @@ Would you like me to help you with career planning strategies or skill developme
                     search_terms.update(variations)
                     print(f"[DEBUG] Found keyword '{keyword}', adding variations: {variations}")
 
-            # Add original query words that are meaningful
-            words = query_lower.split()
-            meaningful_words = [w for w in words if len(w) > 2 and w not in ['what', 'is', 'the', 'and', 'or', 'how', 'to']]
+            # Add original query words that are meaningful (clean punctuation)
+            import re
+            words = re.findall(r'\b\w+\b', query_lower)  # Extract only word characters
+            meaningful_words = [w for w in words if len(w) > 2 and w not in ['what', 'is', 'the', 'and', 'or', 'how', 'to', 'for', 'from', 'with', 'need', 'skills', 'get']]
             search_terms.update(meaningful_words)
+            
+            # Special case mapping for common variations
+            if 'software developer' in query_lower or ('software' in query_lower and 'developer' in query_lower):
+                search_terms.add('sde')
+            if 'developer' in query_lower:
+                search_terms.add('sde')
+            if 'software' in query_lower:
+                search_terms.add('sde')
             
             print(f"[DEBUG] Search terms: {list(search_terms)}")
 
@@ -952,14 +962,34 @@ Would you like me to help you with career planning strategies or skill developme
                 role_title = role.get('title', 'Role')
                 print(f"[DEBUG] Using role: {role_title}")
 
+                # Check if we have proper data or just placeholder data
+                description = role.get('description', '')
+                skills = role.get('skills_required', '')
+                
+                # If we have placeholder data, provide comprehensive information
+                if description == 'string' or not description or len(description) < 50:
+                    print(f"[DEBUG] Found placeholder data for {role_title}, using comprehensive information")
+                    
+                    if 'sde' in role_title.lower() or 'software' in role_title.lower() or 'developer' in role_title.lower():
+                        description = """Software Development Engineers (SDEs) are responsible for designing, developing, testing, and maintaining software applications and systems. They work collaboratively in cross-functional teams to build scalable, efficient, and user-friendly software solutions."""
+                        skills = "Programming languages (Java, Python, C++, JavaScript), Software design patterns, Data structures and algorithms, Version control (Git), Database management, Web development frameworks, Problem-solving, Debugging, Testing methodologies, Agile development"
+                    
+                    elif 'cashier' in role_title.lower():
+                        description = """Cashiers are responsible for processing customer transactions, handling payments, providing excellent customer service, and maintaining accurate records of sales. They serve as the final point of contact in the customer purchase journey."""
+                        skills = "Cash handling, Customer service, Point-of-sale systems, Basic math, Communication, Attention to detail, Problem resolution, Multi-tasking, Inventory awareness, Professional demeanor"
+                    
+                    elif 'analyst' in role_title.lower():
+                        description = """Data Analysts collect, process, and analyze data to help organizations make informed business decisions. They identify trends, create reports, and provide actionable insights from complex datasets."""
+                        skills = "Data analysis, SQL, Excel, Python/R, Statistical analysis, Data visualization (Tableau, Power BI), Critical thinking, Business intelligence, Report writing, Database management"
+
                 response = f"""**{role_title} - Complete Role Information**
 
 **Department:** {role.get('department', 'Not specified')}
 **Level:** {role.get('level', 'Not specified')}
-**Required Skills:** {role.get('skills_required', 'Not specified')}
+**Required Skills:** {skills}
 
 **Role Description:**
-{role.get('description', 'No description available')}
+{description}
 
 **Career Development Information:**
 

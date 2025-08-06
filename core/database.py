@@ -205,21 +205,36 @@ class DatabaseManager:
         return roles
     
     def search_job_roles(self, query: str) -> List[Dict]:
-        """Search job roles by title or department"""
+        """Search job roles by title, department, description, or skills"""
         conn = self.get_connection()
         cursor = conn.cursor()
         
+        # Make search case-insensitive and more flexible
+        search_pattern = f"%{query.lower()}%"
+        
         cursor.execute("""
             SELECT * FROM job_roles
-            WHERE title LIKE ? OR department LIKE ? OR description LIKE ?
-            ORDER BY created_at DESC
-        """, (f"%{query}%", f"%{query}%", f"%{query}%"))
+            WHERE LOWER(title) LIKE ? 
+               OR LOWER(department) LIKE ? 
+               OR LOWER(description) LIKE ?
+               OR LOWER(skills_required) LIKE ?
+            ORDER BY 
+                CASE 
+                    WHEN LOWER(title) LIKE ? THEN 1
+                    WHEN LOWER(department) LIKE ? THEN 2
+                    WHEN LOWER(skills_required) LIKE ? THEN 3
+                    ELSE 4
+                END,
+                created_at DESC
+        """, (search_pattern, search_pattern, search_pattern, search_pattern,
+              search_pattern, search_pattern, search_pattern))
         
         roles = []
         for row in cursor.fetchall():
             roles.append(dict(row))
         
         conn.close()
+        print(f"[DEBUG] Database search for '{query}' found {len(roles)} roles")
         return roles
     
     def save_chat_history(self, user_id: int, query: str, response: str, role_context: str = None):
