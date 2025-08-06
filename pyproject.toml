@@ -19,6 +19,7 @@ dependencies = [
     "uvicorn>=0.35.0",
     "httpx>=0.28.1",
     "pydantic>=2.11.7",
+    "psycopg2-binary>=2.9.10",
 ]
 
 [[tool.uv.index]]

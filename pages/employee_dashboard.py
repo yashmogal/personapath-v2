@@ -1,5 +1,5 @@
 import streamlit as st
-from core.rag_pipeline import RAGPipeline
+from core.personapath_rag import PersonaPathRAG
 from core.skill_analyzer import SkillAnalyzer
 from core.career_planner import CareerPlanner
 from core.mentor_system import MentorSystem
@@ -9,11 +9,11 @@ import plotly.graph_objects as go
 import pandas as pd
 
 class EmployeeDashboard:
-    """Employee dashboard with chat, search, and career planning"""
+    """Employee dashboard with PersonaPath AI career assistant"""
     
     def __init__(self, db_manager):
         self.db_manager = db_manager
-        self.rag_pipeline = RAGPipeline(db_manager)
+        self.personapath = PersonaPathRAG(db_manager)
         self.skill_analyzer = SkillAnalyzer(db_manager)
         self.career_planner = CareerPlanner(db_manager)
         self.mentor_system = MentorSystem(db_manager)
@@ -127,9 +127,9 @@ class EmployeeDashboard:
             # Add user message to chat
             st.session_state.chat_messages.append({"role": "user", "content": user_input})
             
-            # Get AI response
-            with st.spinner("Thinking..."):
-                response = self.rag_pipeline.query_documents(
+            # Get PersonaPath AI response using the strategic approach
+            with st.spinner("PersonaPath is analyzing your career question..."):
+                response = self.personapath.answer_career_question(
                     user_input, 
                     st.session_state.user_id
                 )
@@ -150,10 +150,12 @@ class EmployeeDashboard:
         col1, col2 = st.columns(2)
         
         suggested_questions = [
-            "What's the difference between Data Engineer and Data Analyst?",
-            "How can I move from my current role to Product Management?",
-            "What skills do I need for a Senior Software Engineer role?",
-            "How to transition into AI/ML engineering?"
+            "What skills do I need for Software Developer role?",
+            "What is the salary range for Data Scientist position?",
+            "How can I transition from Cashier to Customer Support Specialist?",
+            "What are the career progression opportunities for UI/UX Designer?",
+            "What are the day-to-day responsibilities of a Product Manager?",
+            "How do I switch from Data Analyst to Data Scientist?"
         ]
         
         for i, question in enumerate(suggested_questions):
@@ -161,8 +163,8 @@ class EmployeeDashboard:
             with col:
                 if st.button(f"💭 {question}", key=f"suggested_{i}", use_container_width=True):
                     st.session_state.chat_messages.append({"role": "user", "content": question})
-                    with st.spinner("Getting answer..."):
-                        response = self.rag_pipeline.query_documents(question, st.session_state.user_id)
+                    with st.spinner("PersonaPath is finding the answer..."):
+                        response = self.personapath.answer_career_question(question, st.session_state.user_id)
                     st.session_state.chat_messages.append({"role": "assistant", "content": response})
                     st.rerun()
         

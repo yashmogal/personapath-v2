@@ -5,8 +5,8 @@ import os
 os.environ["OPENROUTER_API_KEY"] = "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"
 os.environ["OPENROUTER_MODEL"] = "qwen/qwen3-235b-a22b-2507"
 
-from core.auth import AuthManager
-from core.database import DatabaseManager
+from core.auth_pg import AuthManager
+from core.database_pg import DatabaseManager
 from pages.employee_dashboard import EmployeeDashboard
 from pages.hr_dashboard import HRDashboard
 from pages.admin_dashboard import AdminDashboard

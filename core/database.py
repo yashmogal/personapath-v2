@@ -1,19 +1,21 @@
-import sqlite3
 import os
+import psycopg2
+import psycopg2.extras
 from datetime import datetime
 from typing import List, Dict, Optional
 
 class DatabaseManager:
-    """Manages SQLite database operations"""
+    """Manages PostgreSQL database operations"""
     
-    def __init__(self, db_path: str = "personapath.db"):
-        self.db_path = db_path
+    def __init__(self):
+        self.database_url = os.getenv('DATABASE_URL')
+        if not self.database_url:
+            raise ValueError("DATABASE_URL environment variable is required")
         self.init_database()
     
-    def get_connection(self) -> sqlite3.Connection:
+    def get_connection(self):
         """Get database connection"""
-        conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
+        conn = psycopg2.connect(self.database_url)
         return conn
     
     def init_database(self):
@@ -24,11 +26,11 @@ class DatabaseManager:
         # Users table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                role TEXT NOT NULL,
-                current_role TEXT,
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(100) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                role VARCHAR(50) NOT NULL,
+                current_role VARCHAR(100),
                 skills TEXT,
                 goals TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -38,10 +40,10 @@ class DatabaseManager:
         # Job roles table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS job_roles (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                department TEXT,
-                level TEXT,
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(200) NOT NULL,
+                department VARCHAR(100),
+                level VARCHAR(50),
                 description TEXT,
                 skills_required TEXT,
                 file_path TEXT,
@@ -54,11 +56,11 @@ class DatabaseManager:
         # Chat history table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS chat_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL,
                 query TEXT NOT NULL,
                 response TEXT NOT NULL,
-                role_context TEXT,
+                role_context VARCHAR(100),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
@@ -67,9 +69,9 @@ class DatabaseManager:
         # Mentors table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS mentors (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                current_role TEXT,
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                current_role VARCHAR(100),
                 previous_roles TEXT,
                 expertise TEXT,
                 bio TEXT,
@@ -81,10 +83,10 @@ class DatabaseManager:
         # Career paths table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS career_paths (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL,
-                current_role TEXT,
-                target_role TEXT,
+                current_role VARCHAR(100),
+                target_role VARCHAR(100),
                 recommended_steps TEXT,
                 timeline_months INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -95,8 +97,8 @@ class DatabaseManager:
         # Analytics table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS analytics (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                event_type TEXT NOT NULL,
+                id SERIAL PRIMARY KEY,
+                event_type VARCHAR(100) NOT NULL,
                 user_id INTEGER,
                 metadata TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -144,8 +146,9 @@ class DatabaseManager:
         
         for mentor in sample_mentors:
             cursor.execute("""
-                INSERT OR IGNORE INTO mentors (name, current_role, previous_roles, expertise, bio, contact_info)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO mentors (name, current_role, previous_roles, expertise, bio, contact_info)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (name) DO NOTHING
             """, (
                 mentor["name"],
                 mentor["current_role"], 
