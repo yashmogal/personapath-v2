@@ -200,6 +200,30 @@ Career Transition Information:
             print(f"[DEBUG] Vector store exists: {self.vectorstore is not None}")
             print(f"[DEBUG] LLM exists: {self.llm is not None}")
 
+            # Check for career transition queries first (before database search)
+            query_lower = query.lower()
+            transition_phrases = [
+                "switch from", "transition from", "change from", "move from",
+                "switch between", "transition between", "change between", "move between",
+                "how to switch", "switching from", "switching between"
+            ]
+            
+            # If it contains transition patterns AND mentions two different roles, handle as transition
+            if any(phrase in query_lower for phrase in transition_phrases):
+                if ("from" in query_lower and "to" in query_lower) or any(word in query_lower for word in ["switch", "transition", "change", "move"]):
+                    print(f"[DEBUG] Detected transition query, using transition handler")
+                    transition_response = self._handle_career_transition(query_lower)
+                    if transition_response and "Career Transition:" in transition_response:
+                        # Save to chat history
+                        if user_id:
+                            self.db_manager.save_chat_history(
+                                user_id=user_id,
+                                query=query,
+                                response=transition_response,
+                                role_context="Career Transition"
+                            )
+                        return transition_response
+
             # Always try database search first for role-related queries
             db_response = self._get_database_role_info(query, user_id)
             if db_response:
@@ -346,56 +370,88 @@ Career Transition Information:
         source_role_data = None
         target_role_data = None
 
-        # Common role keywords
-        roles = {
-            'software development': 'Software Development',
-            'software developer': 'Software Development',
-            'developer': 'Software Development',
-            'programming': 'Software Development',
-            'cashier': 'Cashier',
-            'data scientist': 'Data Science',
-            'data science': 'Data Science',
-            'marketing': 'Marketing',
-            'sales': 'Sales',
-            'hr': 'Human Resources',
-            'human resources': 'Human Resources',
-            'product manager': 'Product Management',
-            'product management': 'Product Management'
-        }
+        # Get actual roles from database for precise matching
+        all_roles = self.db_manager.get_job_roles()
+        role_mapping = {}
+        
+        # Create mapping from database roles
+        for role in all_roles:
+            title = role.get('title', '').lower()
+            role_mapping[title] = role.get('title', '')
+            
+            # Add common variations
+            if 'sde' in title:
+                role_mapping['software developer'] = role.get('title', '')
+                role_mapping['developer'] = role.get('title', '')
+                role_mapping['software engineer'] = role.get('title', '')
+            elif 'hr' in title or 'human resources' in title:
+                role_mapping['hr'] = role.get('title', '')
+                role_mapping['human resources'] = role.get('title', '')
+            elif 'data analyst' in title:
+                role_mapping['data analyst'] = role.get('title', '')
+                role_mapping['analyst'] = role.get('title', '')
+            elif 'cashier' in title:
+                role_mapping['cashier'] = role.get('title', '')
+                
+        print(f"[DEBUG] Role mapping created with {len(role_mapping)} entries")
 
-        # Find source and target roles in query
-        for keyword, role_name in roles.items():
+        # Find source and target roles in query - improved matching
+        words = query_lower.split()
+        
+        # Look for "from X to Y" pattern
+        if 'from' in words and 'to' in words:
+            from_idx = words.index('from')
+            to_idx = words.index('to')
+            
+            if from_idx < to_idx:
+                from_section = ' '.join(words[from_idx+1:to_idx])
+                to_section = ' '.join(words[to_idx+1:])
+                
+                # Match against database roles
+                for keyword, role_title in role_mapping.items():
+                    if keyword in from_section:
+                        source_role = role_title
+                        print(f"[DEBUG] Found source role: {source_role} from keyword: {keyword}")
+                    if keyword in to_section:
+                        target_role = role_title  
+                        print(f"[DEBUG] Found target role: {target_role} from keyword: {keyword}")
+        
+        # Alternative: look for specific transition patterns
+        for keyword, role_title in role_mapping.items():
             if f"from {keyword}" in query_lower:
-                source_role = role_name
+                source_role = role_title
+                print(f"[DEBUG] Found source role: {source_role} from pattern: from {keyword}")
             if f"to {keyword}" in query_lower:
-                target_role = role_name
+                target_role = role_title
+                print(f"[DEBUG] Found target role: {target_role} from pattern: to {keyword}")
 
         # Handle "between X and Y" queries
         if "between" in query_lower and "and" in query_lower:
             # Extract roles mentioned in the query
             mentioned_roles = []
-            for keyword, role_name in roles.items():
+            for keyword, role_title in role_mapping.items():
                 if keyword in query_lower:
-                    mentioned_roles.append(role_name)
+                    mentioned_roles.append(role_title)
 
             # If we found exactly 2 roles, assume first is source, second is target
             if len(mentioned_roles) == 2:
                 source_role = mentioned_roles[0]
                 target_role = mentioned_roles[1]
+                print(f"[DEBUG] Between pattern - source: {source_role}, target: {target_role}")
 
         # Get role data from database if available
         if source_role or target_role:
             try:
-                all_roles = self.db_manager.get_job_roles()
-
                 for role in all_roles:
-                    role_title = role.get('title', '').lower()
-                    if source_role and source_role.lower() in role_title:
+                    role_title = role.get('title', '')
+                    if source_role and role_title == source_role:
                         source_role_data = role
-                    if target_role and target_role.lower() in role_title:
+                        print(f"[DEBUG] Found source role data: {source_role}")
+                    if target_role and role_title == target_role:
                         target_role_data = role
+                        print(f"[DEBUG] Found target role data: {target_role}")
             except Exception as e:
-                # Continue with generic response if database lookup fails
+                print(f"[DEBUG] Error getting role data: {e}")
                 pass
 
         if source_role and target_role:
@@ -1496,8 +1552,8 @@ Would you like me to help you with career planning strategies or skill developme
 - **Performance Engineering:** Integrated performance testing throughout development
 - **Security Testing:** Growing emphasis on security and vulnerability testing"""
 
-        elif "human resources" in query_lower or "hr" in query_lower:
-            if "future" in query_lower or "prospects" in query_lower or "scope" in query_lower:
+        elif "human resources" in query.lower() or "hr" in query.lower():
+            if "future" in query.lower() or "prospects" in query.lower() or "scope" in query.lower():
                 response += """
 **Growing Importance of HR:**
 Human Resources is evolving from a support function to a strategic business partner. The field is experiencing significant growth and transformation.
