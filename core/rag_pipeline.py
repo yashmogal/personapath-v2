@@ -9,7 +9,7 @@ except ImportError:
     # Import will be done later to avoid circular imports
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.memory import ConversationBufferMemory
+from langchain.memory import ConversationBufferBufferMemory
 from langchain.schema import Document
 try:
     from langchain_openai import ChatOpenAI
@@ -20,19 +20,19 @@ import streamlit as st
 
 class RAGPipeline:
     """Handles RAG (Retrieval-Augmented Generation) operations"""
-    
+
     def __init__(self, db_manager):
         self.db_manager = db_manager
         self.embeddings = None
         self.vectorstore = None
         self.llm = None
-        self.memory = ConversationBufferMemory(
+        self.memory = ConversationBufferBufferMemory(
             memory_key="chat_history",
             return_messages=True,
             output_key="answer"
         )
         self._initialize_components()
-    
+
     def _initialize_components(self):
         """Initialize LLM and embeddings"""
         try:
@@ -54,11 +54,11 @@ class RAGPipeline:
                 from .simple_embeddings import SimpleEmbeddings
                 self.embeddings = SimpleEmbeddings()
                 st.info("✅ Using simple embeddings (sentence-transformers not available)")
-            
+
             # Get OpenRouter API key from environment
             openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
             openrouter_model = os.getenv("OPENROUTER_MODEL", "qwen/qwen3-235b-a22b-2507")
-            
+
             if openrouter_api_key:
                 try:
                     # Initialize LLM with OpenRouter
@@ -76,7 +76,7 @@ class RAGPipeline:
             else:
                 st.warning("⚠️ OpenRouter API key not configured. Chat functionality will use fallback responses.")
                 self.llm = None
-                
+
         except Exception as e:
             st.error(f"Error initializing RAG components: {e}")
             # Fallback to basic setup
@@ -95,14 +95,14 @@ class RAGPipeline:
                 from .simple_embeddings import SimpleEmbeddings
                 self.embeddings = SimpleEmbeddings()
                 st.info("✅ Using basic fallback embeddings")
-    
+
     def process_documents(self, documents: List[Dict]) -> bool:
         """Process and embed job role documents"""
         try:
             if not self.embeddings:
                 st.warning("Embeddings not available. Documents processed but not embedded.")
                 return True
-            
+
             # Convert documents to LangChain Document format
             langchain_docs = []
             for doc in documents:
@@ -113,7 +113,7 @@ class RAGPipeline:
                 Description: {doc.get('description', '')}
                 Skills Required: {doc.get('skills_required', '')}
                 """
-                
+
                 langchain_docs.append(Document(
                     page_content=content,
                     metadata={
@@ -123,16 +123,16 @@ class RAGPipeline:
                         'level': doc.get('level')
                     }
                 ))
-            
+
             # Split documents into chunks
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=1000,
                 chunk_overlap=200,
                 length_function=len
             )
-            
+
             chunks = text_splitter.split_documents(langchain_docs)
-            
+
             # Create or update vector store
             if self.vectorstore is None:
                 self.vectorstore = FAISS.from_documents(
@@ -141,20 +141,20 @@ class RAGPipeline:
                 )
             else:
                 self.vectorstore.add_documents(chunks)
-            
+
             return True
-            
+
         except Exception as e:
             st.error(f"Error processing documents: {e}")
             return False
-    
+
     def query_documents(self, query: str, user_id: int, k: int = 3) -> str:
         """Query documents using RAG pipeline"""
         try:
             if not self.vectorstore or not self.llm:
                 # Return a helpful response even without full RAG
                 return self._fallback_response(query)
-            
+
             # Create conversational retrieval chain
             chain = ConversationalRetrievalChain.from_llm(
                 llm=self.llm,
@@ -162,48 +162,48 @@ class RAGPipeline:
                 memory=self.memory,
                 return_source_documents=True
             )
-            
+
             # Get response
             result = chain({"question": query})
             response = result["answer"]
-            
+
             # Save to chat history
             self.db_manager.save_chat_history(
                 user_id=user_id,
                 query=query,
                 response=response
             )
-            
+
             # Log analytics
             self.db_manager.log_analytics_event(
                 event_type="chat_query",
                 user_id=user_id,
                 metadata=json.dumps({"query_length": len(query)})
             )
-            
+
             return response
-            
+
         except Exception as e:
             error_msg = f"I apologize, but I encountered an error processing your query: {str(e)}"
-            
+
             # Still save the interaction
             self.db_manager.save_chat_history(
                 user_id=user_id,
                 query=query,
                 response=error_msg
             )
-            
+
             return error_msg
-    
+
     def _handle_career_transition(self, query_lower: str) -> str:
         """Handle career transition queries with database role information"""
-        
+
         # Parse source and target roles
         source_role = None
         target_role = None
         source_role_data = None
         target_role_data = None
-        
+
         # Common role keywords
         roles = {
             'software development': 'Software Development',
@@ -220,14 +220,14 @@ class RAGPipeline:
             'product manager': 'Product Management',
             'product management': 'Product Management'
         }
-        
+
         # Find source and target roles in query
         for keyword, role_name in roles.items():
             if f"from {keyword}" in query_lower:
                 source_role = role_name
             if f"to {keyword}" in query_lower:
                 target_role = role_name
-        
+
         # Handle "between X and Y" queries
         if "between" in query_lower and "and" in query_lower:
             # Extract roles mentioned in the query
@@ -235,17 +235,17 @@ class RAGPipeline:
             for keyword, role_name in roles.items():
                 if keyword in query_lower:
                     mentioned_roles.append(role_name)
-            
+
             # If we found exactly 2 roles, assume first is source, second is target
             if len(mentioned_roles) == 2:
                 source_role = mentioned_roles[0]
                 target_role = mentioned_roles[1]
-        
+
         # Get role data from database if available
         if source_role or target_role:
             try:
                 all_roles = self.db_manager.get_job_roles()
-                
+
                 for role in all_roles:
                     role_title = role.get('title', '').lower()
                     if source_role and source_role.lower() in role_title:
@@ -255,13 +255,13 @@ class RAGPipeline:
             except Exception as e:
                 # Continue with generic response if database lookup fails
                 pass
-        
+
         if source_role and target_role:
             # Build response with database information when available
             response = f"""**Career Transition: {source_role} → {target_role}**
 
 """
-            
+
             # Add specific role information if available
             if source_role_data:
                 response += f"""**Current Role: {source_role_data.get('title', source_role)}**
@@ -271,7 +271,7 @@ class RAGPipeline:
 - **Description:** {source_role_data.get('description', 'N/A')[:200]}...
 
 """
-            
+
             if target_role_data:
                 response += f"""**Target Role: {target_role_data.get('title', target_role)}**
 - **Department:** {target_role_data.get('department', 'N/A')}
@@ -280,27 +280,27 @@ class RAGPipeline:
 - **Description:** {target_role_data.get('description', 'N/A')[:200]}...
 
 """
-            
+
             # Add transition analysis based on available data
             if source_role_data and target_role_data:
                 source_skills = set(skill.strip().lower() for skill in source_role_data.get('skills_required', '').split(',') if skill.strip())
                 target_skills = set(skill.strip().lower() for skill in target_role_data.get('skills_required', '').split(',') if skill.strip())
-                
+
                 transferable_skills = source_skills.intersection(target_skills)
                 skill_gaps = target_skills - source_skills
-                
+
                 if transferable_skills:
                     response += f"""**Transferable Skills:**
 {', '.join(skill.title() for skill in transferable_skills)}
 
 """
-                
+
                 if skill_gaps:
                     response += f"""**Skills to Develop:**
 {', '.join(skill.title() for skill in skill_gaps)}
 
 """
-            
+
             response += f"""**Why Make This Change?**
 Career transitions can offer new challenges, different work environments, and fresh opportunities for growth.
 
@@ -341,9 +341,9 @@ Career transitions can offer new challenges, different work environments, and fr
 - Consider informational interviews with people in {target_role}
 
 Would you like specific advice about transitioning from {source_role} to {target_role}?"""
-            
+
             return response
-        
+
         return """**Career Transition Guidance:**
 
 I can help you plan a career transition! To provide specific advice, I'd need to know:
@@ -363,23 +363,23 @@ I can help you plan a career transition! To provide specific advice, I'd need to
 
 Feel free to ask about specific role transitions like "How do I switch from X to Y role?"
 """
-    
+
     def _fallback_response(self, query: str) -> str:
         """Provide fallback response when RAG is not available"""
-        
+
         # Simple keyword-based responses for common queries
         query_lower = query.lower()
-        
+
         # Career transition queries (switching from one role to another)
         transition_phrases = [
             "switch from", "transition from", "change from", "move from",
             "switch between", "transition between", "change between", "move between",
             "how to switch", "switching from", "switching between"
         ]
-        
+
         if any(phrase in query_lower for phrase in transition_phrases):
             return self._handle_career_transition(query_lower)
-        
+
         # Software Development roles - with specific question handling
         if "software development" in query_lower or "software developer" in query_lower:
             # Check for specific questions about salary
@@ -412,7 +412,7 @@ Feel free to ask about specific role transitions like "How do I switch from X to
 - DevOps/Site Reliability Engineering
 - Full-Stack Development
 - Mobile App Development"""
-            
+
             # Check for career path questions
             elif any(word in query_lower for word in ["career", "path", "progression", "growth", "advance"]):
                 return """**Software Developer Career Path:**
@@ -421,16 +421,16 @@ Feel free to ask about specific role transitions like "How do I switch from X to
 1. **Intern/Junior Developer** (0-2 years)
    - Learn fundamentals, work on small features
    - Mentored by senior developers
-   
+
 2. **Software Developer** (2-4 years)
    - Independent feature development
    - Code reviews and testing
-   
+
 3. **Senior Software Developer** (4-7 years)
    - Lead complex projects
    - Mentor junior developers
    - Architecture decisions
-   
+
 4. **Lead Developer/Tech Lead** (7-10 years)
    - Team leadership
    - Technical strategy
@@ -447,7 +447,7 @@ Feel free to ask about specific role transitions like "How do I switch from X to
 - System design and architecture
 - Business understanding
 - Mentoring abilities"""
-            
+
             # Check for skills questions
             elif any(word in query_lower for word in ["skill", "learn", "technology", "programming", "language"]):
                 return """**Software Development Skills:**
@@ -485,7 +485,7 @@ Feel free to ask about specific role transitions like "How do I switch from X to
 3. Build projects and contribute to open source
 4. Understand software architecture patterns
 5. Stay updated with industry trends"""
-            
+
             # Default software development overview
             else:
                 return """**Software Development Overview:**
@@ -542,8 +542,7 @@ A cashier is a retail professional responsible for processing customer transacti
 - Basic computer and POS system knowledge
 - Ability to work in fast-paced environments
 
-**Career Path:**
-Cashier → Senior Cashier → Shift Supervisor → Assistant Manager → Store Manager
+**Career Path:** Cashier → Senior Cashier → Shift Supervisor → Assistant Manager → Store Manager
 
 **Typical Salary Range:** $25,000 - $35,000 annually, often with opportunities for advancement"""
 
@@ -563,7 +562,7 @@ Cashier → Senior Cashier → Shift Supervisor → Assistant Manager → Store 
 - Focus: Business intelligence and data interpretation
 
 **Career Path:** Data Analyst → Senior Analyst → Data Engineer → Senior Data Engineer"""
-        
+
         elif "product management" in query_lower or "product manager" in query_lower:
             return """**Product Management:**
 
@@ -586,7 +585,7 @@ Product management involves guiding the development, launch, and lifecycle of pr
 
 **Career Path:**
 Product Analyst → Associate PM → Product Manager → Senior PM → Product Director"""
-        
+
         elif "data scientist" in query_lower:
             return """**Data Scientist:**
 
@@ -692,7 +691,7 @@ I'd recommend connecting with professionals who have made similar career transit
 - Participation in company mentorship programs
 
 Consider reaching out with specific questions about their career journey and transition experience."""
-        
+
         else:
             # Try to extract potential role from query for better response
             potential_roles = ["developer", "engineer", "analyst", "manager", "designer", "consultant", "coordinator", "specialist", "administrator", "technician"]
@@ -701,7 +700,7 @@ Consider reaching out with specific questions about their career journey and tra
                 if role in query_lower:
                     found_role = role
                     break
-            
+
             if found_role:
                 return f"""**{found_role.title()} Role Information:**
 
@@ -720,7 +719,7 @@ I don't have specific details about this role in our database right now, but her
 - Build relationships with people in that department
 
 Would you like me to help you create a development plan for transitioning to a {found_role} role?"""
-            
+
             return f"""I understand you're asking about: "{query}"
 
 I don't have specific information about this role in our database right now. Here are some ways to get more detailed information:
@@ -738,17 +737,193 @@ I don't have specific information about this role in our database right now. Her
 - Build professional relationships in that area
 
 Would you like me to help you with career planning strategies or skill development recommendations?"""
-    
+
+    def _get_database_role_info(self, query: str) -> Optional[str]:
+        """Get role information directly from database"""
+        try:
+            # Enhanced role keyword mapping
+            role_keywords = {
+                'sde': 'software developer',
+                'software development engineer': 'software developer',
+                'software engineer': 'software developer',
+                'developer': 'software developer',
+                'programming': 'software developer',
+                'software development': 'software developer',
+                'data scientist': 'data scientist',
+                'data science': 'data scientist',
+                'ml engineer': 'machine learning engineer',
+                'product manager': 'product manager',
+                'product management': 'product manager',
+                'cashier': 'cashier',
+                'finance': 'finance',
+                'financial analyst': 'finance',
+                'marketing': 'marketing',
+                'sales': 'sales',
+                'hr': 'human resources',
+                'human resources': 'human resources'
+            }
+
+            # Find the best matching role keyword
+            search_terms = []
+            for keyword, normalized in role_keywords.items():
+                if keyword in query.lower():
+                    search_terms.append(normalized)
+
+            # Also search for the original query terms
+            search_terms.extend(query.split())
+
+            # Search for roles in database
+            roles = []
+            for term in search_terms:
+                found_roles = self.db_manager.search_job_roles(term)
+                roles.extend(found_roles)
+
+            # Remove duplicates
+            unique_roles = []
+            seen_ids = set()
+            for role in roles:
+                if role.get('id') not in seen_ids:
+                    unique_roles.append(role)
+                    seen_ids.add(role.get('id'))
+
+            if unique_roles:
+                # Return comprehensive information for the best matching role
+                role = unique_roles[0]
+                role_title = role.get('title', 'Role')
+
+                response = f"""**{role_title} - Complete Role Information**
+
+**Department:** {role.get('department', 'Not specified')}
+**Level:** {role.get('level', 'Not specified')}
+**Required Skills:** {role.get('skills_required', 'Not specified')}
+
+**Role Description:**
+{role.get('description', 'No description available')}
+
+**Career Development Information:**
+
+**Career Progression Path:**"""
+
+                # Add role-specific career progression
+                if 'software' in role_title.lower() or 'developer' in role_title.lower() or 'sde' in role_title.lower():
+                    response += """
+1. **Junior/Entry Level** → Software Developer I (0-2 years)
+2. **Mid-Level** → Software Developer II/Senior Developer (2-5 years)
+3. **Senior Level** → Senior Software Engineer/Tech Lead (5-8 years)
+4. **Leadership Track** → Engineering Manager → Director → VP Engineering
+5. **Technical Track** → Staff Engineer → Principal Engineer → Distinguished Engineer
+
+**Future of Software Development:**
+- **AI Integration:** Increased use of AI tools for code generation and debugging
+- **Cloud-Native Development:** Focus on microservices and containerization
+- **Low-Code/No-Code Platforms:** Rising demand for visual development tools
+- **Cybersecurity Integration:** Security-first development practices
+- **Edge Computing:** Development for IoT and edge devices
+- **Quantum Computing:** Emerging opportunities in quantum algorithms"""
+
+                elif 'data scientist' in role_title.lower():
+                    response += """
+1. **Entry Level** → Junior Data Scientist (0-2 years)
+2. **Mid-Level** → Data Scientist (2-4 years)
+3. **Senior Level** → Senior Data Scientist (4-7 years)
+4. **Specialization** → ML Engineer, Research Scientist, Data Engineering
+5. **Leadership** → Principal Data Scientist → Director of Data Science
+
+**Future of Data Science:**
+- **MLOps and Model Deployment:** Focus on production-ready ML systems
+- **Automated ML (AutoML):** Tools for automated model selection and tuning
+- **Explainable AI:** Increasing demand for interpretable models
+- **Real-time Analytics:** Stream processing and real-time decision making
+- **Privacy-Preserving ML:** Federated learning and differential privacy"""
+
+                elif 'product manager' in role_title.lower():
+                    response += """
+1. **Entry Level** → Associate Product Manager (0-2 years)
+2. **Mid-Level** → Product Manager (2-5 years)
+3. **Senior Level** → Senior Product Manager (5-8 years)
+4. **Leadership** → Group PM → Director → VP Product → CPO
+
+**Future of Product Management:**
+- **Data-Driven Decision Making:** Advanced analytics for product insights
+- **User Experience Focus:** Integration with UX/UI design processes
+- **AI-Powered Products:** Building products with embedded AI capabilities
+- **Cross-Platform Strategy:** Managing products across multiple platforms"""
+
+                else:
+                    response += """
+Career progression varies by department and specialization. Typical paths include:
+1. **Entry Level** → Junior/Associate roles
+2. **Mid-Level** → Standard professional roles
+3. **Senior Level** → Senior professional/specialist roles
+4. **Leadership** → Management → Director → VP levels"""
+
+                response += f"""
+
+**Skills Development Recommendations:**
+- Focus on developing the required skills listed above
+- Stay updated with industry trends and emerging technologies
+- Seek mentorship from senior professionals in this field
+- Consider relevant certifications and continuous learning
+
+**Career Transition Opportunities:**
+Would you like to know about transitioning FROM or TO {role_title}? I can provide specific guidance on:
+- Skills needed for career transitions
+- Timeline and steps for role changes  
+- Related roles you might consider
+
+**Available Mentors in Our Organization:**"""
+
+                # Add mentor information
+                try:
+                    mentors = self.db_manager.get_mentors()
+                    relevant_mentors = [m for m in mentors if any(keyword in m.get('current_role', '').lower() 
+                                      for keyword in role_title.lower().split())]
+
+                    if relevant_mentors:
+                        for mentor in relevant_mentors[:2]:  # Show top 2 relevant mentors
+                            response += f"""
+- **{mentor.get('name')}** - {mentor.get('current_role')}
+  Expertise: {mentor.get('expertise', 'N/A')}
+  Contact: {mentor.get('contact_info', 'N/A')}"""
+                    else:
+                        response += """
+No specific mentors found for this role in our current database."""
+                except:
+                    response += """
+Mentor information currently unavailable."""
+
+                response += """
+
+**Next Steps:**
+1. Review the required skills and assess your current capabilities
+2. Create a development plan for any skill gaps
+3. Connect with mentors or professionals in this field
+4. Consider relevant training or certification programs
+5. Look for stretch assignments or projects related to this role
+
+Ask me specific questions like:
+- "How to switch from [current role] to [target role]?"
+- "What skills do I need for [role]?"
+- "Career path for [specific role]?"
+- "Future prospects in [field]?" """
+
+                return response
+
+            return None
+
+        except Exception as e:
+            return None
+
     def get_similar_roles(self, query: str, k: int = 5) -> List[Dict]:
         """Find similar roles using semantic search"""
         try:
             if not self.vectorstore:
                 # Fallback to database search
                 return self.db_manager.search_job_roles(query)
-            
+
             # Use vector similarity search
             docs = self.vectorstore.similarity_search(query, k=k)
-            
+
             similar_roles = []
             for doc in docs:
                 if 'id' in doc.metadata:
@@ -759,13 +934,13 @@ Would you like me to help you with career planning strategies or skill developme
                         if role['id'] == role_id:
                             similar_roles.append(role)
                             break
-            
+
             return similar_roles
-            
+
         except Exception as e:
             st.error(f"Error finding similar roles: {e}")
             return self.db_manager.search_job_roles(query)
-    
+
     def refresh_vectorstore(self):
         """Refresh vector store with latest job roles"""
         try:
@@ -775,6 +950,6 @@ Would you like me to help you with career planning strategies or skill developme
                 st.success("Knowledge base updated successfully!")
             else:
                 st.info("No job roles found to process.")
-                
+
         except Exception as e:
             st.error(f"Error refreshing knowledge base: {e}")
