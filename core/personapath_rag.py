@@ -18,6 +18,12 @@ PersonaPath supports all types of questions including:
 """
 
 try:
+    from langchain_openai import OpenAIEmbeddings
+    OPENAI_EMBEDDINGS_AVAILABLE = True
+except ImportError:
+    OPENAI_EMBEDDINGS_AVAILABLE = False
+
+try:
     from langchain_community.embeddings import HuggingFaceEmbeddings
     HUGGINGFACE_AVAILABLE = True
 except ImportError:
@@ -49,21 +55,37 @@ class PersonaPathRAG:
     def _initialize_components(self):
         """Initialize AI components"""
         try:
-            # Initialize embeddings
-            if HUGGINGFACE_AVAILABLE:
-                self.embeddings = HuggingFaceEmbeddings(
-                    model_name="sentence-transformers/all-MiniLM-L6-v2",
-                    model_kwargs={'device': 'cpu'}
-                )
+            # Initialize embeddings - try OpenAI first, then HuggingFace
+            if OPENAI_EMBEDDINGS_AVAILABLE:
+                try:
+                    self.embeddings = OpenAIEmbeddings(
+                        openai_api_key=st.secrets.get("OPENAI_API_KEY", ""),
+                        openai_api_base="https://openrouter.ai/api/v1"
+                    )
+                except:
+                    self.embeddings = None
+            elif HUGGINGFACE_AVAILABLE:
+                try:
+                    self.embeddings = HuggingFaceEmbeddings(
+                        model_name="sentence-transformers/all-MiniLM-L6-v2",
+                        model_kwargs={'device': 'cpu'}
+                    )
+                except:
+                    self.embeddings = None
+            else:
+                self.embeddings = None
             
             # Initialize LLM
-            self.llm = ChatOpenAI(
-                model="gpt-3.5-turbo",
-                temperature=0.1,
-                openai_api_key=st.secrets.get("OPENAI_API_KEY", ""),
-                openai_api_base="https://openrouter.ai/api/v1",
-                default_headers={"HTTP-Referer": "https://replit.com", "X-Title": "PersonaPath"}
-            )
+            try:
+                self.llm = ChatOpenAI(
+                    model="gpt-3.5-turbo",
+                    temperature=0.1,
+                    openai_api_key=st.secrets.get("OPENAI_API_KEY", ""),
+                    openai_api_base="https://openrouter.ai/api/v1",
+                    default_headers={"HTTP-Referer": "https://replit.com", "X-Title": "PersonaPath"}
+                )
+            except:
+                self.llm = None
             
             # Build vector store from database
             self._build_vector_store()

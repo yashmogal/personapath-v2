@@ -385,3 +385,29 @@ class DatabaseManager:
         conn.close()
         
         return [dict(row) for row in results]
+
+    def get_job_roles(self, limit: int = 100) -> List[Dict]:
+        """Get all job roles - compatibility method"""
+        return self.get_all_job_roles()[:limit]
+
+    def search_job_roles(self, query: str) -> List[Dict]:
+        """Search job roles - compatibility method"""
+        return self.search_roles_by_keyword(query)
+
+    def clear_chat_history(self, user_id: int):
+        """Clear all chat history for a user"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM chat_history WHERE user_id = %s", (user_id,))
+        conn.commit()
+        conn.close()
+
+    def delete_chat_entry(self, chat_id: int):
+        """Delete a specific chat entry"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM chat_history WHERE id = %s", (chat_id,))
+        conn.commit()
+        conn.close()

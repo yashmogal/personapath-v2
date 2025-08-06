@@ -174,7 +174,8 @@ class EmployeeDashboard:
         with col1:
             if st.button("🔄 Refresh Knowledge Base", help="Update the AI's knowledge with latest role information"):
                 with st.spinner("Refreshing knowledge base..."):
-                    self.rag_pipeline.refresh_vectorstore()
+                    result = self.personapath.refresh_knowledge_base()
+                    st.success(result)
         
         with col2:
             roles_count = len(self.db_manager.get_job_roles())
