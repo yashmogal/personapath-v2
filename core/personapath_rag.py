@@ -286,26 +286,68 @@ Career Transition Context:
     def _identify_role_in_query(self, normalized_query: str) -> Optional[str]:
         """Step 2: Identify role mentioned in user's question"""
         
-        # Direct role name matching
-        for keyword, official_title in self.role_keywords.items():
-            if keyword in normalized_query:
+        # Handle specific terms and variations
+        role_mappings = {
+            'sde': 'Software Developer',
+            'software engineer': 'Software Developer', 
+            'software development': 'Software Developer',
+            'software developer': 'Software Developer',
+            'developer': 'Software Developer',
+            'data science': 'Data Scientist',
+            'data scientist': 'Data Scientist',
+            'data analyst': 'Data Analyst',
+            'analyst': 'Data Analyst',
+            'ui/ux': 'UI/UX Designer',
+            'designer': 'UI/UX Designer',
+            'product manager': 'Product Manager',
+            'product management': 'Product Manager',
+            'pm': 'Product Manager',
+            'cashier': 'Cashier',
+            'customer support': 'Customer Support Specialist',
+            'support specialist': 'Customer Support Specialist',
+            'hr manager': 'HR Manager',
+            'human resources': 'HR Manager',
+            'devops': 'DevOps Engineer',
+            'qa': 'Quality Assurance Engineer',
+            'quality assurance': 'Quality Assurance Engineer',
+            'financial analyst': 'Financial Analyst',
+            'finance': 'Financial Analyst',
+            'marketing': 'Marketing Specialist',
+            'sales': 'Sales Representative',
+            'content writer': 'Content Writer',
+            'writer': 'Content Writer'
+        }
+        
+        # Handle transition queries - prioritize target role
+        if any(word in normalized_query for word in ['transition', 'switch', 'move', 'change', 'become']):
+            # Look for "to X" or "become X" patterns first
+            target_patterns = [
+                r'(?:to|become|switch to|transition to|move to)\s+([a-zA-Z\s]+?)(?:\?|$|role|position)',
+                r'(?:to|become)\s+(?:a|an)?\s*([a-zA-Z\s]+?)(?:\?|$|role|position)',
+                r'(?:from\s+[^to]+\s+to)\s+([a-zA-Z\s]+?)(?:\?|$|role|position)'
+            ]
+            
+            for pattern in target_patterns:
+                target_match = re.search(pattern, normalized_query)
+                if target_match:
+                    target_role = target_match.group(1).strip().lower()
+                    for key, official_title in role_mappings.items():
+                        if key in target_role or target_role in key:
+                            return official_title
+            
+            # If no target found, look for source role
+            source_match = re.search(r'(?:from|current)\s+([a-zA-Z\s]+?)\s+(?:to|become)', normalized_query)
+            if source_match:
+                source_role = source_match.group(1).strip().lower()
+                for key, official_title in role_mappings.items():
+                    if key in source_role or source_role in key:
+                        return official_title
+        
+        # Direct role name matching for non-transition queries
+        for key, official_title in role_mappings.items():
+            if key in normalized_query:
                 return official_title
                 
-        # Handle transition queries (from X to Y)
-        transition_match = re.search(r'(?:from|current)\s+(.+?)\s+(?:to|become|switch|transition)', normalized_query)
-        if transition_match:
-            current_role = transition_match.group(1).strip()
-            for keyword, official_title in self.role_keywords.items():
-                if keyword in current_role:
-                    return official_title
-                    
-        target_match = re.search(r'(?:to|become|switch|transition)(?:\s+to)?\s+(.+?)(?:\?|$|role|position)', normalized_query)
-        if target_match:
-            target_role = target_match.group(1).strip()
-            for keyword, official_title in self.role_keywords.items():
-                if keyword in target_role:
-                    return official_title
-        
         return None
         
     def _generate_precise_response(self, 
@@ -318,6 +360,10 @@ Career Transition Context:
         
         # Determine response type based on query
         response_type = self._classify_query_type(normalized_query)
+        
+        # Handle career transition queries specially
+        if response_type == 'career_transition':
+            return self._generate_transition_response(original_query, normalized_query)
         
         if database_info:
             # Generate response with database information
@@ -340,9 +386,9 @@ Career Transition Context:
             return 'salary'
         elif any(word in normalized_query for word in ['skills', 'requirements', 'qualifications', 'need']):
             return 'skills'
-        elif any(word in normalized_query for word in ['future', 'career path', 'progression', 'growth', 'next']):
+        elif any(word in normalized_query for word in ['future', 'career path', 'progression', 'growth', 'next', 'scope']):
             return 'career_progression'
-        elif any(word in normalized_query for word in ['switch', 'transition', 'change', 'move', 'from']):
+        elif any(word in normalized_query for word in ['switch', 'transition', 'change', 'move', 'from', 'become']):
             return 'career_transition'
         elif any(word in normalized_query for word in ['responsibilities', 'duties', 'day-to-day', 'tasks']):
             return 'responsibilities'
@@ -446,6 +492,103 @@ The {title} role offers excellent growth potential in {department}. With the req
 • Opportunity to work with cutting-edge technologies/processes
 
 📞 **Next Steps**: Connect with our HR team or explore mentorship opportunities to learn more about this career path."""
+
+    def _generate_transition_response(self, original_query: str, normalized_query: str) -> str:
+        """Generate career transition response with both source and target roles"""
+        
+        # Extract source and target roles from transition query
+        source_role = None
+        target_role = None
+        
+        # Pattern for "from X to Y"
+        transition_match = re.search(r'(?:from|current)\s+([^to]+?)\s+(?:to|become)\s+([a-zA-Z\s]+?)(?:\?|$)', normalized_query)
+        if transition_match:
+            source_role = self._identify_role_in_query(f"role is {transition_match.group(1).strip()}")
+            target_role = self._identify_role_in_query(f"role is {transition_match.group(2).strip()}")
+        else:
+            # Look for target role in general transition query
+            target_match = re.search(r'(?:to|become)\s+([a-zA-Z\s]+?)(?:\?|$)', normalized_query)
+            if target_match:
+                target_role = self._identify_role_in_query(f"role is {target_match.group(1).strip()}")
+        
+        # Get database info for both roles
+        source_info = None
+        target_info = None
+        
+        if source_role:
+            source_info = self.db_manager.get_role_by_title(source_role)
+        if target_role:
+            target_info = self.db_manager.get_role_by_title(target_role)
+        
+        if target_info:
+            title = target_info['title']
+            department = target_info['department']
+            level = target_info['level']
+            skills = target_info['skills_required']
+            salary_min = target_info.get('salary_min', 0)
+            salary_max = target_info.get('salary_max', 0)
+            
+            response = f"""**Career Transition Guide: {source_role or 'Current Role'} → {title}**
+
+🎯 **Target Role**: {title}
+🏢 **Department**: {department}
+📊 **Level**: {level}
+💰 **Salary Range**: ${salary_min:,} - ${salary_max:,}
+
+🛤️ **Transition Path**:"""
+            
+            if source_info:
+                source_skills = set(skill.strip().lower() for skill in source_info['skills_required'].split(','))
+                target_skills = set(skill.strip().lower() for skill in skills.split(','))
+                
+                # Find transferable and missing skills
+                transferable = source_skills.intersection(target_skills)
+                missing = target_skills - source_skills
+                
+                if transferable:
+                    response += f"""
+✅ **Transferable Skills You Already Have**:
+{chr(10).join(f"• {skill.title()}" for skill in list(transferable)[:5])}"""
+                
+                if missing:
+                    response += f"""
+📚 **Skills to Develop**:
+{chr(10).join(f"• {skill.title()}" for skill in list(missing)[:5])}"""
+            else:
+                skills_list = [skill.strip() for skill in skills.split(',')]
+                response += f"""
+📚 **Key Skills You'll Need**:
+{chr(10).join(f"• {skill}" for skill in skills_list[:6])}"""
+            
+            response += f"""
+
+🚀 **Next Steps**:
+• Focus on developing the missing skills through training or projects
+• Connect with current {title}s for mentorship and advice
+• Look for internal opportunities to gain relevant experience
+• Consider taking on projects that use {skills.split(',')[0]} and {skills.split(',')[1] if len(skills.split(',')) > 1 else 'related technologies'}
+
+💡 **Pro Tip**: Start building experience in {title} responsibilities while in your current role to make the transition smoother."""
+            
+            return response
+        else:
+            return f"""**Career Transition Information**
+
+I understand you're interested in transitioning to a different role. While I don't have specific details about your target role in our database, here's general guidance:
+
+🛤️ **General Transition Steps**:
+• Identify the skills gap between your current and target role
+• Create a development plan to build missing competencies  
+• Seek mentorship from people in your target role
+• Look for stretch assignments or projects in your area of interest
+• Consider internal mobility programs
+
+📞 **Personalized Guidance**: For specific transition advice, please connect with:
+• Your manager for internal opportunities
+• HR for career development resources
+• Mentors in your target field
+
+*Our HR team can provide detailed transition planning based on your specific situation.*"""
 
     def _generate_semantic_response(self, 
                                   query: str, 
