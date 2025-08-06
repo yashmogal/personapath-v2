@@ -9,7 +9,7 @@ except ImportError:
     # Import will be done later to avoid circular imports
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.memory import ConversationBufferBufferMemory
+from langchain.memory import ConversationBufferMemory
 from langchain.schema import Document
 try:
     from langchain_openai import ChatOpenAI
@@ -26,7 +26,7 @@ class RAGPipeline:
         self.embeddings = None
         self.vectorstore = None
         self.llm = None
-        self.memory = ConversationBufferBufferMemory(
+        self.memory = ConversationBufferMemory(
             memory_key="chat_history",
             return_messages=True,
             output_key="answer"
