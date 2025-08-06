@@ -411,3 +411,11 @@ class DatabaseManager:
         cursor.execute("DELETE FROM chat_history WHERE id = %s", (chat_id,))
         conn.commit()
         conn.close()
+
+    def get_role_by_title(self, title: str) -> Optional[Dict]:
+        """Get a specific job role by title - compatibility method"""
+        roles = self.get_all_job_roles()
+        for role in roles:
+            if role['title'].lower() == title.lower():
+                return role
+        return None

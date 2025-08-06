@@ -133,47 +133,9 @@ class PersonaPathRAG:
         return role_keywords
         
     def _build_vector_store(self):
-        """Build vector store from database job roles"""
-        if not self.embeddings:
-            return
-            
-        try:
-            roles = self.db_manager.get_all_job_roles()
-            if not roles:
-                print("[PersonaPath] No job roles found for vector store")
-                return
-                
-            # Create enhanced documents for better semantic search
-            documents = []
-            for role in roles:
-                # Enhanced content with multiple phrasings for better matching
-                content = self._create_enhanced_role_content(role)
-                
-                documents.append(Document(
-                    page_content=content,
-                    metadata={
-                        'title': role['title'],
-                        'department': role['department'],
-                        'level': role['level'],
-                        'role_id': role['id']
-                    }
-                ))
-            
-            # Split documents into chunks
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=800,
-                chunk_overlap=200,
-                length_function=len
-            )
-            
-            chunks = text_splitter.split_documents(documents)
-            
-            # Create vector store
-            self.vectorstore = FAISS.from_documents(chunks, self.embeddings)
-            print(f"[PersonaPath] Vector store created with {len(chunks)} chunks from {len(roles)} roles")
-            
-        except Exception as e:
-            print(f"[PersonaPath] Error building vector store: {e}")
+        """Optimized - skip vector store for better performance"""
+        self.vectorstore = None
+        print("[PersonaPath] Speed optimized - using database-first approach")
             
     def _create_enhanced_role_content(self, role: Dict) -> str:
         """Create enhanced content for better semantic matching"""
@@ -259,14 +221,8 @@ Career Transition Context:
             if database_info:
                 print(f"[PersonaPath] Found database info for: {database_info['title']}")
         
-        # Step 4: Use semantic search in vector store
+        # Step 4: Skip semantic search for performance
         semantic_docs = []
-        if self.vectorstore:
-            try:
-                semantic_docs = self.vectorstore.similarity_search(user_query, k=3)
-                print(f"[PersonaPath] Found {len(semantic_docs)} semantic documents")
-            except Exception as e:
-                print(f"[PersonaPath] Semantic search failed: {e}")
         
         # Step 5: Combine both sources for precise response
         response = self._generate_precise_response(
