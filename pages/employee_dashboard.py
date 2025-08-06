@@ -13,10 +13,20 @@ class EmployeeDashboard:
     
     def __init__(self, db_manager):
         self.db_manager = db_manager
-        self.personapath = FastPersonaPath(db_manager)
-        self.skill_analyzer = SkillAnalyzer(db_manager)
-        self.career_planner = CareerPlanner(db_manager)
-        self.mentor_system = MentorSystem(db_manager)
+        # Initialize components only once using session state
+        if 'personapath' not in st.session_state:
+            st.session_state.personapath = FastPersonaPath(db_manager)
+        if 'skill_analyzer' not in st.session_state:
+            st.session_state.skill_analyzer = SkillAnalyzer(db_manager)
+        if 'career_planner' not in st.session_state:
+            st.session_state.career_planner = CareerPlanner(db_manager)
+        if 'mentor_system' not in st.session_state:
+            st.session_state.mentor_system = MentorSystem(db_manager)
+        
+        self.personapath = st.session_state.personapath
+        self.skill_analyzer = st.session_state.skill_analyzer
+        self.career_planner = st.session_state.career_planner
+        self.mentor_system = st.session_state.mentor_system
     
     def render(self):
         """Render modern employee dashboard"""

@@ -12,21 +12,18 @@ class FastPersonaPath:
     
     def __init__(self, db_manager):
         self.db_manager = db_manager
-        self._roles_cache = None
-        self._role_mapping = None
-        print("[FastPersonaPath] Initialized with performance optimizations")
+        # Pre-load cache immediately for instant responses
+        self._roles_cache = db_manager.get_all_job_roles()
+        self._role_mapping = self._build_role_mapping()
+        print(f"[FastPersonaPath] Ready - {len(self._roles_cache)} roles cached")
     
     def _get_roles_cache(self):
-        """Get cached roles for instant access"""
-        if self._roles_cache is None:
-            self._roles_cache = self.db_manager.get_all_job_roles()
-            print(f"[FastPersonaPath] Cached {len(self._roles_cache)} roles")
+        """Get pre-cached roles for instant access"""
         return self._roles_cache
     
-    def _get_role_mapping(self):
-        """Get cached role mapping for instant lookups"""
-        if self._role_mapping is None:
-            self._role_mapping = {
+    def _build_role_mapping(self):
+        """Build role mapping for instant lookups"""
+        return {
                 'sde': 'Software Developer',
                 'software engineer': 'Software Developer',
                 'software development': 'Software Developer',
@@ -70,7 +67,6 @@ class FastPersonaPath:
                 'writer': 'Content Writer',
                 'content': 'Content Writer'
             }
-        return self._role_mapping
     
     def answer_career_question(self, user_query: str, user_id: int = 1) -> str:
         """Provide instant, detailed career responses"""
@@ -102,9 +98,13 @@ class FastPersonaPath:
         
         return response
     
+    def _get_role_mapping(self):
+        """Get pre-built role mapping"""
+        return self._role_mapping
+    
     def _identify_role_fast(self, normalized_query: str) -> Optional[str]:
-        """Fast role identification using cached mappings"""
-        role_mapping = self._get_role_mapping()
+        """Fast role identification using pre-cached mappings"""
+        role_mapping = self._role_mapping
         
         # Handle transition queries - prioritize target role
         if any(word in normalized_query for word in ['transition', 'switch', 'move', 'change', 'become', 'from']):
