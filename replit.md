@@ -10,6 +10,19 @@ The platform serves multiple user types including employees exploring career pat
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes (August 2025)
+
+### Vector Store Issue Resolution
+- **Issue**: Vector store not properly retrieving uploaded job descriptions (software developer, cashier, data analyst roles)
+- **Root Cause**: Poor similarity search matching and fallback mechanisms not utilizing database information
+- **Solution**: Enhanced RAG pipeline with multi-layered search strategy:
+  1. Database-first approach for role-related queries
+  2. Improved similarity search with multiple search patterns
+  3. Enhanced keyword mapping for better role matching
+  4. Added comprehensive role-specific career progression information
+  5. Better debugging and logging for troubleshooting
+- **Status**: ✅ Fixed - Vector store now properly handles role queries and provides comprehensive responses
+
 ## System Architecture
 
 ### Frontend Architecture

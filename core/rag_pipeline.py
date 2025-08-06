@@ -195,76 +195,137 @@ Career Transition Information:
     def query_documents(self, query: str, user_id: int, k: int = 3) -> str:
         """Query documents using RAG pipeline"""
         try:
-            if not self.vectorstore or not self.llm:
-                # Return a helpful response even without full RAG
-                return self._fallback_response(query)
-
-            # First, try to get relevant documents using vector search
-            relevant_docs = self.vectorstore.similarity_search(query, k=k*2)  # Get more documents initially
+            # Debug: Log the current state
+            print(f"[DEBUG] Query: {query}")
+            print(f"[DEBUG] Vector store exists: {self.vectorstore is not None}")
+            print(f"[DEBUG] LLM exists: {self.llm is not None}")
             
-            # If no relevant documents found, try broader search terms
-            if not relevant_docs or len(relevant_docs) == 0:
-                # Extract key terms from query for broader search
-                key_terms = self._extract_key_terms(query)
-                for term in key_terms:
-                    term_docs = self.vectorstore.similarity_search(term, k=2)
-                    relevant_docs.extend(term_docs)
-                
-                # Remove duplicates
-                seen_content = set()
-                unique_docs = []
-                for doc in relevant_docs:
-                    if doc.page_content not in seen_content:
-                        unique_docs.append(doc)
-                        seen_content.add(doc.page_content)
-                relevant_docs = unique_docs[:k]
+            # Always try database search first for role-related queries
+            db_response = self._get_database_role_info(query)
+            if db_response:
+                print(f"[DEBUG] Found database response for query")
+                # Save to chat history
+                self.db_manager.save_chat_history(user_id=user_id, query=query, response=db_response)
+                return db_response
 
-            # If we still don't have documents, use fallback with database info
-            if not relevant_docs:
+            if not self.vectorstore:
+                print(f"[DEBUG] No vector store, using enhanced fallback")
                 return self._enhanced_fallback_response(query)
 
-            # Create conversational retrieval chain
-            chain = ConversationalRetrievalChain.from_llm(
-                llm=self.llm,
-                retriever=self.vectorstore.as_retriever(search_kwargs={"k": k}),
-                memory=self.memory,
-                return_source_documents=True
-            )
+            # Try vector similarity search with different approaches
+            relevant_docs = []
+            
+            # 1. Direct query search
+            try:
+                docs = self.vectorstore.similarity_search(query, k=k*3)  # Get more documents initially
+                relevant_docs.extend(docs)
+                print(f"[DEBUG] Direct search found {len(docs)} documents")
+            except Exception as e:
+                print(f"[DEBUG] Direct search failed: {e}")
 
-            # Enhance the query with context if it's a transition query
-            enhanced_query = self._enhance_query_context(query)
+            # 2. Search with extracted key terms
+            key_terms = self._extract_key_terms(query)
+            print(f"[DEBUG] Key terms extracted: {key_terms}")
+            
+            for term in key_terms:
+                try:
+                    term_docs = self.vectorstore.similarity_search(term, k=3)
+                    relevant_docs.extend(term_docs)
+                    print(f"[DEBUG] Term '{term}' found {len(term_docs)} documents")
+                except Exception as e:
+                    print(f"[DEBUG] Term search for '{term}' failed: {e}")
+            
+            # 3. Search with role-specific patterns
+            query_lower = query.lower()
+            role_patterns = []
+            
+            if 'data analyst' in query_lower:
+                role_patterns.extend(['data analyst', 'data analysis', 'analyst'])
+            if 'software developer' in query_lower:
+                role_patterns.extend(['software developer', 'software development', 'developer', 'programming'])
+            if 'cashier' in query_lower:
+                role_patterns.extend(['cashier', 'retail', 'customer service'])
+            
+            for pattern in role_patterns:
+                try:
+                    pattern_docs = self.vectorstore.similarity_search(pattern, k=2)
+                    relevant_docs.extend(pattern_docs)
+                    print(f"[DEBUG] Pattern '{pattern}' found {len(pattern_docs)} documents")
+                except Exception as e:
+                    print(f"[DEBUG] Pattern search for '{pattern}' failed: {e}")
+            
+            # Remove duplicates while preserving order
+            seen_content = set()
+            unique_docs = []
+            for doc in relevant_docs:
+                content_hash = hash(doc.page_content[:200])  # Hash first 200 chars for deduplication
+                if content_hash not in seen_content:
+                    unique_docs.append(doc)
+                    seen_content.add(content_hash)
+            
+            relevant_docs = unique_docs[:k*2]  # Keep more relevant docs
+            print(f"[DEBUG] Total unique documents found: {len(relevant_docs)}")
+            
+            # If we have relevant docs and an LLM, use the conversational chain
+            if relevant_docs and self.llm:
+                try:
+                    # Create conversational retrieval chain
+                    chain = ConversationalRetrievalChain.from_llm(
+                        llm=self.llm,
+                        retriever=self.vectorstore.as_retriever(search_kwargs={"k": k*2}),
+                        memory=self.memory,
+                        return_source_documents=True
+                    )
 
-            # Get response
-            result = chain({"question": enhanced_query})
-            response = result["answer"]
+                    # Enhance the query with context
+                    enhanced_query = self._enhance_query_context(query)
+                    print(f"[DEBUG] Enhanced query: {enhanced_query}")
 
-            # If the response is too generic or short, enhance it with database information
-            if len(response.split()) < 20 or "I don't" in response or "I can't" in response:
-                enhanced_response = self._enhance_response_with_db_info(query, response)
-                if enhanced_response:
-                    response = enhanced_response
+                    # Get response
+                    result = chain({"question": enhanced_query})
+                    response = result["answer"]
+                    print(f"[DEBUG] LLM response length: {len(response.split())} words")
 
-            # Save to chat history
-            self.db_manager.save_chat_history(
-                user_id=user_id,
-                query=query,
-                response=response
-            )
+                    # If the response is too generic or short, enhance it with database information
+                    if len(response.split()) < 20 or "I don't" in response or "I can't" in response or "sorry" in response.lower():
+                        print(f"[DEBUG] Response too generic, trying database enhancement")
+                        enhanced_response = self._enhanced_fallback_response(query)
+                        if enhanced_response:
+                            response = enhanced_response
 
-            # Log analytics
-            self.db_manager.log_analytics_event(
-                event_type="chat_query",
-                user_id=user_id,
-                metadata=json.dumps({
-                    "query_length": len(query),
-                    "docs_found": len(relevant_docs),
-                    "response_length": len(response)
-                })
-            )
+                    # Save to chat history
+                    self.db_manager.save_chat_history(user_id=user_id, query=query, response=response)
 
-            return response
+                    # Log analytics
+                    self.db_manager.log_analytics_event(
+                        event_type="chat_query",
+                        user_id=user_id,
+                        metadata=json.dumps({
+                            "query_length": len(query),
+                            "docs_found": len(relevant_docs),
+                            "response_length": len(response)
+                        })
+                    )
+
+                    return response
+                except Exception as chain_error:
+                    print(f"[DEBUG] Chain execution failed: {chain_error}")
+
+            # If we have documents but no LLM, create a response from the documents
+            if relevant_docs:
+                print(f"[DEBUG] Creating response from documents without LLM")
+                response = self._create_response_from_docs(query, relevant_docs)
+                self.db_manager.save_chat_history(user_id=user_id, query=query, response=response)
+                return response
+
+            # Final fallback
+            print(f"[DEBUG] Using final enhanced fallback")
+            fallback_response = self._enhanced_fallback_response(query)
+            self.db_manager.save_chat_history(user_id=user_id, query=query, response=fallback_response)
+            return fallback_response
 
         except Exception as e:
+            print(f"[DEBUG] Exception in query_documents: {e}")
             st.error(f"Error in RAG pipeline: {e}")
             # Use enhanced fallback instead of generic error
             fallback_response = self._enhanced_fallback_response(query)
@@ -824,55 +885,72 @@ Would you like me to help you with career planning strategies or skill developme
     def _get_database_role_info(self, query: str) -> Optional[str]:
         """Get role information directly from database"""
         try:
+            print(f"[DEBUG] Searching database for query: {query}")
+            
             # Enhanced role keyword mapping
             role_keywords = {
-                'sde': 'software developer',
-                'software development engineer': 'software developer',
-                'software engineer': 'software developer',
-                'developer': 'software developer',
-                'programming': 'software developer',
-                'software development': 'software developer',
-                'data scientist': 'data scientist',
-                'data science': 'data scientist',
-                'ml engineer': 'machine learning engineer',
-                'product manager': 'product manager',
-                'product management': 'product manager',
-                'cashier': 'cashier',
-                'finance': 'finance',
-                'financial analyst': 'finance',
-                'marketing': 'marketing',
-                'sales': 'sales',
-                'hr': 'human resources',
-                'human resources': 'human resources'
+                'sde': ['software developer', 'software development', 'developer'],
+                'software development engineer': ['software developer', 'software development', 'developer'],
+                'software engineer': ['software developer', 'software development', 'developer'],
+                'developer': ['software developer', 'software development', 'developer'],
+                'programming': ['software developer', 'software development', 'developer'],
+                'software development': ['software developer', 'software development', 'developer'],
+                'data analyst': ['data analyst', 'data analysis', 'analyst'],
+                'data scientist': ['data scientist', 'data science'],
+                'data analysis': ['data analyst', 'data analysis', 'analyst'],
+                'analyst': ['analyst', 'data analyst', 'business analyst'],
+                'ml engineer': ['machine learning', 'ml engineer', 'data scientist'],
+                'product manager': ['product manager', 'product management'],
+                'product management': ['product manager', 'product management'],
+                'cashier': ['cashier', 'retail', 'customer service'],
+                'finance': ['finance', 'financial analyst'],
+                'financial analyst': ['finance', 'financial analyst'],
+                'marketing': ['marketing', 'marketing specialist'],
+                'sales': ['sales', 'sales representative'],
+                'hr': ['human resources', 'hr'],
+                'human resources': ['human resources', 'hr']
             }
 
-            # Find the best matching role keyword
-            search_terms = []
-            for keyword, normalized in role_keywords.items():
-                if keyword in query.lower():
-                    search_terms.append(normalized)
+            # Find the best matching role keywords
+            search_terms = set()
+            query_lower = query.lower()
+            
+            # Direct keyword matching
+            for keyword, variations in role_keywords.items():
+                if keyword in query_lower:
+                    search_terms.update(variations)
+                    print(f"[DEBUG] Found keyword '{keyword}', adding variations: {variations}")
 
-            # Also search for the original query terms
-            search_terms.extend(query.split())
+            # Add original query words that are meaningful
+            words = query_lower.split()
+            meaningful_words = [w for w in words if len(w) > 2 and w not in ['what', 'is', 'the', 'and', 'or', 'how', 'to']]
+            search_terms.update(meaningful_words)
+            
+            print(f"[DEBUG] Search terms: {list(search_terms)}")
 
             # Search for roles in database
             roles = []
             for term in search_terms:
                 found_roles = self.db_manager.search_job_roles(term)
                 roles.extend(found_roles)
+                print(f"[DEBUG] Term '{term}' found {len(found_roles)} roles")
 
             # Remove duplicates
             unique_roles = []
             seen_ids = set()
             for role in roles:
-                if role.get('id') not in seen_ids:
+                role_id = role.get('id')
+                if role_id not in seen_ids:
                     unique_roles.append(role)
-                    seen_ids.add(role.get('id'))
+                    seen_ids.add(role_id)
+
+            print(f"[DEBUG] Total unique roles found: {len(unique_roles)}")
 
             if unique_roles:
                 # Return comprehensive information for the best matching role
                 role = unique_roles[0]
                 role_title = role.get('title', 'Role')
+                print(f"[DEBUG] Using role: {role_title}")
 
                 response = f"""**{role_title} - Complete Role Information**
 
@@ -904,6 +982,21 @@ Would you like me to help you with career planning strategies or skill developme
 - **Edge Computing:** Development for IoT and edge devices
 - **Quantum Computing:** Emerging opportunities in quantum algorithms"""
 
+                elif 'data analyst' in role_title.lower() or 'analyst' in role_title.lower():
+                    response += """
+1. **Entry Level** → Junior Data Analyst (0-2 years)
+2. **Mid-Level** → Data Analyst (2-4 years)  
+3. **Senior Level** → Senior Data Analyst (4-6 years)
+4. **Specialization** → Business Analyst, Data Scientist, Analytics Manager
+5. **Leadership** → Analytics Team Lead → Director of Analytics
+
+**Future of Data Analysis:**
+- **Advanced Analytics Tools:** AI-powered dashboards and automated insights
+- **Self-Service Analytics:** Democratization of data analysis across organizations
+- **Real-time Analytics:** Stream processing and instant decision making
+- **Predictive Analytics:** Forecasting and trend analysis
+- **Data Storytelling:** Visual communication of insights to stakeholders"""
+
                 elif 'data scientist' in role_title.lower():
                     response += """
 1. **Entry Level** → Junior Data Scientist (0-2 years)
@@ -918,6 +1011,21 @@ Would you like me to help you with career planning strategies or skill developme
 - **Explainable AI:** Increasing demand for interpretable models
 - **Real-time Analytics:** Stream processing and real-time decision making
 - **Privacy-Preserving ML:** Federated learning and differential privacy"""
+
+                elif 'cashier' in role_title.lower():
+                    response += """
+1. **Entry Level** → Cashier/Sales Associate (0-1 year)
+2. **Mid-Level** → Senior Cashier/Customer Service Lead (1-3 years)
+3. **Supervisor Level** → Shift Supervisor/Team Lead (2-4 years)
+4. **Management** → Assistant Manager → Store Manager
+5. **Corporate** → Regional Manager → District Manager
+
+**Future of Retail/Cashier Roles:**
+- **Technology Integration:** Self-checkout systems and mobile payment solutions
+- **Customer Experience Focus:** Enhanced service delivery and problem resolution
+- **Data Analytics:** Understanding customer patterns and preferences
+- **Omnichannel Retail:** Integration of online and offline shopping experiences
+- **Loss Prevention:** Advanced security and inventory management"""
 
                 elif 'product manager' in role_title.lower():
                     response += """
@@ -1024,6 +1132,92 @@ Ask me specific questions like:
             st.error(f"Error finding similar roles: {e}")
             return self.db_manager.search_job_roles(query)
 
+    def _create_response_from_docs(self, query: str, relevant_docs: List) -> str:
+        """Create a response from relevant documents when LLM is not available"""
+        if not relevant_docs:
+            return self._enhanced_fallback_response(query)
+        
+        # Extract information from the most relevant document
+        best_doc = relevant_docs[0]
+        content = best_doc.page_content
+        metadata = best_doc.metadata
+        
+        # Try to extract role title from metadata or content
+        role_title = metadata.get('title', 'Role')
+        if not role_title or role_title == 'Role':
+            # Try to extract from content
+            lines = content.split('\n')
+            for line in lines:
+                if line.startswith('Job Role:') or line.startswith('Position:'):
+                    role_title = line.split(':', 1)[1].strip()
+                    break
+        
+        # Create a comprehensive response based on the document content
+        response = f"**{role_title}**\n\n"
+        
+        # Extract key sections from content
+        lines = content.split('\n')
+        current_section = ""
+        sections = {}
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            if line.startswith('Role Description:'):
+                current_section = "description"
+                continue
+            elif line.startswith('Required Skills'):
+                current_section = "skills"
+                continue
+            elif line.startswith('Career Level:'):
+                current_section = "level"
+                continue
+            elif line.startswith('Department:'):
+                current_section = "department"
+                continue
+            
+            if current_section and not line.startswith(('Job Role:', 'Position:', 'Role Title:')):
+                if current_section not in sections:
+                    sections[current_section] = []
+                sections[current_section].append(line)
+        
+        # Build response from sections
+        if 'description' in sections:
+            response += "**Description:**\n"
+            response += '\n'.join(sections['description'][:3])  # First 3 lines
+            response += "\n\n"
+        
+        if 'skills' in sections:
+            response += "**Required Skills:**\n"
+            response += '\n'.join(sections['skills'][:5])  # First 5 lines
+            response += "\n\n"
+        
+        if 'department' in sections:
+            response += f"**Department:** {' '.join(sections['department'])}\n\n"
+        
+        if 'level' in sections:
+            response += f"**Level:** {' '.join(sections['level'])}\n\n"
+        
+        # Add transition guidance if the query is about transitions
+        query_lower = query.lower()
+        if any(word in query_lower for word in ['switch', 'transition', 'change', 'move']):
+            response += "**Career Transition Guidance:**\n"
+            response += "- Review the required skills above and assess your current capabilities\n"
+            response += "- Identify skill gaps and create a development plan\n"
+            response += "- Consider relevant training or certification programs\n"
+            response += "- Connect with professionals currently in this role\n"
+            response += "- Look for stretch assignments that align with this role\n\n"
+        
+        response += "**Next Steps:**\n"
+        response += "- Research more about this role within our organization\n"
+        response += "- Connect with current employees in this position\n"
+        response += "- Assess your skills against the requirements\n"
+        response += "- Consider relevant training opportunities\n"
+        
+        return response
+
     def _extract_key_terms(self, query: str) -> List[str]:
         """Extract key terms from query for broader search"""
         query_lower = query.lower()
@@ -1103,15 +1297,34 @@ Ask me specific questions like:
     def refresh_vectorstore(self):
         """Refresh vector store with latest job roles"""
         try:
+            print("[DEBUG] Starting vector store refresh...")
             roles = self.db_manager.get_job_roles()
+            print(f"[DEBUG] Found {len(roles)} roles in database")
+            
             if roles:
+                # Clear existing vector store to ensure fresh data
+                self.vectorstore = None
+                print("[DEBUG] Cleared existing vector store")
+                
                 success = self.process_documents(roles)
                 if success:
-                    st.success(f"Knowledge base updated successfully with {len(roles)} roles!")
+                    print(f"[DEBUG] Successfully processed {len(roles)} roles")
+                    st.success(f"✅ Knowledge base updated successfully with {len(roles)} roles!")
+                    
+                    # Test the vector store
+                    if self.vectorstore:
+                        try:
+                            test_docs = self.vectorstore.similarity_search("software developer", k=1)
+                            print(f"[DEBUG] Vector store test: found {len(test_docs)} documents for 'software developer'")
+                            if test_docs:
+                                print(f"[DEBUG] Sample doc content: {test_docs[0].page_content[:100]}...")
+                        except Exception as test_error:
+                            print(f"[DEBUG] Vector store test failed: {test_error}")
                 else:
-                    st.warning("Knowledge base update completed with some issues.")
+                    st.warning("⚠️ Knowledge base update completed with some issues.")
             else:
-                st.info("No job roles found to process.")
+                st.info("ℹ️ No job roles found to process.")
 
         except Exception as e:
-            st.error(f"Error refreshing knowledge base: {e}")
+            print(f"[DEBUG] Error in refresh_vectorstore: {e}")
+            st.error(f"❌ Error refreshing knowledge base: {e}")
