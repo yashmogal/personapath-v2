@@ -112,7 +112,7 @@ class RAGPipeline:
                 level = doc.get('level', '')
                 description = doc.get('description', '')
                 skills = doc.get('skills_required', '')
-                
+
                 # Enhanced content with multiple phrasings for better matching
                 content = f"""
 Job Role: {title}
@@ -178,7 +178,7 @@ Career Transition Information:
             # Create or update vector store
             if self.vectorstore is None:
                 self.vectorstore = FAISS.from_documents(
-                    chunks, 
+                    chunks,
                     self.embeddings
                 )
                 st.info(f"Created new vector store with {len(chunks)} chunks from {len(documents)} documents")
@@ -199,7 +199,7 @@ Career Transition Information:
             print(f"[DEBUG] Query: {query}")
             print(f"[DEBUG] Vector store exists: {self.vectorstore is not None}")
             print(f"[DEBUG] LLM exists: {self.llm is not None}")
-            
+
             # Always try database search first for role-related queries
             db_response = self._get_database_role_info(query)
             if db_response:
@@ -214,7 +214,7 @@ Career Transition Information:
 
             # Try vector similarity search with different approaches
             relevant_docs = []
-            
+
             # 1. Direct query search
             try:
                 docs = self.vectorstore.similarity_search(query, k=k*3)  # Get more documents initially
@@ -226,7 +226,7 @@ Career Transition Information:
             # 2. Search with extracted key terms
             key_terms = self._extract_key_terms(query)
             print(f"[DEBUG] Key terms extracted: {key_terms}")
-            
+
             for term in key_terms:
                 try:
                     term_docs = self.vectorstore.similarity_search(term, k=3)
@@ -234,18 +234,18 @@ Career Transition Information:
                     print(f"[DEBUG] Term '{term}' found {len(term_docs)} documents")
                 except Exception as e:
                     print(f"[DEBUG] Term search for '{term}' failed: {e}")
-            
+
             # 3. Search with role-specific patterns
             query_lower = query.lower()
             role_patterns = []
-            
+
             if 'data analyst' in query_lower:
                 role_patterns.extend(['data analyst', 'data analysis', 'analyst'])
             if 'software developer' in query_lower:
                 role_patterns.extend(['software developer', 'software development', 'developer', 'programming'])
             if 'cashier' in query_lower:
                 role_patterns.extend(['cashier', 'retail', 'customer service'])
-            
+
             for pattern in role_patterns:
                 try:
                     pattern_docs = self.vectorstore.similarity_search(pattern, k=2)
@@ -253,7 +253,7 @@ Career Transition Information:
                     print(f"[DEBUG] Pattern '{pattern}' found {len(pattern_docs)} documents")
                 except Exception as e:
                     print(f"[DEBUG] Pattern search for '{pattern}' failed: {e}")
-            
+
             # Remove duplicates while preserving order
             seen_content = set()
             unique_docs = []
@@ -262,10 +262,10 @@ Career Transition Information:
                 if content_hash not in seen_content:
                     unique_docs.append(doc)
                     seen_content.add(content_hash)
-            
+
             relevant_docs = unique_docs[:k*2]  # Keep more relevant docs
             print(f"[DEBUG] Total unique documents found: {len(relevant_docs)}")
-            
+
             # If we have relevant docs and an LLM, use the conversational chain
             if relevant_docs and self.llm:
                 try:
@@ -329,7 +329,7 @@ Career Transition Information:
             st.error(f"Error in RAG pipeline: {e}")
             # Use enhanced fallback instead of generic error
             fallback_response = self._enhanced_fallback_response(query)
-            
+
             # Still save the interaction
             self.db_manager.save_chat_history(
                 user_id=user_id,
@@ -351,7 +351,7 @@ Career Transition Information:
         # Common role keywords
         roles = {
             'software development': 'Software Development',
-            'software developer': 'Software Development', 
+            'software developer': 'Software Development',
             'developer': 'Software Development',
             'programming': 'Software Development',
             'cashier': 'Cashier',
@@ -532,7 +532,7 @@ Feel free to ask about specific role transitions like "How do I switch from X to
 
 **Salary Range by Experience Level:**
 - **Entry Level (0-2 years):** $60,000 - $80,000
-- **Mid-Level (2-5 years):** $80,000 - $120,000  
+- **Mid-Level (2-5 years):** $80,000 - $120,000
 - **Senior Level (5+ years):** $120,000 - $180,000
 - **Lead/Principal (8+ years):** $150,000 - $250,000+
 
@@ -802,27 +802,71 @@ Junior Web Developer → Web Developer → Senior Web Developer → Full Stack D
 Marketing Specialist → Marketing Manager → Senior Marketing Manager → Marketing Director"""
 
         elif "human resources" in query_lower or "hr" in query_lower:
-            return """**Human Resources (HR):**
+            if "future" in query_lower or "prospects" in query_lower or "scope" in query_lower:
+                return """**Future Prospects in Human Resources:**
+
+**Growing Importance of HR:**
+Human Resources is evolving from a support function to a strategic business partner. The field is experiencing significant growth and transformation.
+
+**Future Growth Areas:**
+1. **People Analytics & Data-Driven HR**: Using AI and analytics to make strategic workforce decisions
+2. **Employee Experience Design**: Creating holistic employee journeys and workplace experiences
+3. **Diversity, Equity & Inclusion (DEI)**: Leading organizational culture transformation
+4. **Remote Work Management**: Developing policies and practices for hybrid/remote workforces
+5. **HR Technology**: Implementing and managing HRIS, ATS, and other HR tech platforms
+6. **Talent Intelligence**: Strategic workforce planning and skills gap analysis
+
+**Career Growth Opportunities:**
+- **Entry Level**: HR Assistant → HR Coordinator → HR Generalist
+- **Mid Level**: HR Business Partner → HR Manager → Senior HR Manager
+- **Senior Level**: HR Director → VP of People → Chief People Officer (CPO)
+- **Specializations**: Talent Acquisition, Compensation & Benefits, Learning & Development, Employee Relations
+
+**Industry Demand:**
+- 7% projected job growth (faster than average)
+- High demand across all industries
+- Competitive salaries with growth potential
+- Opportunities for consulting and freelance work
+
+**Key Skills for the Future:**
+- HR Analytics and People Data
+- Change Management
+- Digital HR Tools & Platforms
+- Employment Law & Compliance
+- Strategic Business Thinking
+- Cross-cultural Communication
+
+**Salary Expectations:**
+- **Entry Level**: $45,000 - $65,000
+- **Mid Level**: $65,000 - $95,000
+- **Senior Level**: $95,000 - $150,000+
+- **Executive Level**: $150,000 - $300,000+
+
+The future of HR is bright with increasing recognition of human capital as a competitive advantage."""
+            else:
+                return """**Human Resources (HR):**
 
 **What is Human Resources?**
-HR professionals manage the employee lifecycle, from recruitment to retirement, ensuring compliance and supporting organizational culture.
+HR professionals manage the employee lifecycle, from recruitment to retention. They ensure compliance with labor laws, manage employee relations, and drive organizational culture.
 
 **Key Responsibilities:**
-- Recruiting and onboarding new employees
-- Managing employee relations and performance
-- Handling payroll and benefits administration
-- Ensuring legal compliance and policy enforcement
-- Supporting professional development and training
+- Talent acquisition and recruitment
+- Employee onboarding and training
+- Performance management
+- Compensation and benefits administration
+- Employee relations and conflict resolution
+- Policy development and compliance
 
 **Essential Skills:**
-- Communication and interpersonal skills
-- Knowledge of employment law and regulations
-- Conflict resolution and problem-solving
-- Data analysis and HRIS systems
-- Organizational and time management
+- People management and communication
+- Employment law knowledge
+- Data analysis and HR metrics
+- Conflict resolution
+- Strategic planning
+- HRIS systems proficiency
 
 **Career Path:**
-HR Assistant → HR Specialist → HR Generalist → HR Manager → HR Director"""
+HR Assistant → HR Generalist → HR Manager → HR Director → CHRO"""
 
         elif "mentor" in query_lower:
             return """**Finding Mentors:**
@@ -886,12 +930,12 @@ Would you like me to help you with career planning strategies or skill developme
         """Get role information directly from database"""
         try:
             print(f"[DEBUG] Searching database for query: {query}")
-            
+
             # Enhanced role keyword mapping - need to match actual database titles
             role_keywords = {
                 'sde': ['sde', 'software development engineer', 'software developer', 'software development', 'developer', 'programming'],
                 'software development engineer': ['sde', 'software developer', 'software development', 'developer'],
-                'software engineer': ['sde', 'software developer', 'software development', 'developer'], 
+                'software engineer': ['sde', 'software developer', 'software development', 'developer'],
                 'developer': ['sde', 'software developer', 'software development', 'developer'],
                 'programming': ['sde', 'software developer', 'software development', 'developer'],
                 'software development': ['sde', 'software developer', 'software development', 'developer'],
@@ -915,7 +959,7 @@ Would you like me to help you with career planning strategies or skill developme
             # Find the best matching role keywords
             search_terms = set()
             query_lower = query.lower()
-            
+
             # Direct keyword matching
             for keyword, variations in role_keywords.items():
                 if keyword in query_lower:
@@ -927,7 +971,7 @@ Would you like me to help you with career planning strategies or skill developme
             words = re.findall(r'\b\w+\b', query_lower)  # Extract only word characters
             meaningful_words = [w for w in words if len(w) > 2 and w not in ['what', 'is', 'the', 'and', 'or', 'how', 'to', 'for', 'from', 'with', 'need', 'skills', 'get']]
             search_terms.update(meaningful_words)
-            
+
             # Special case mapping for common variations
             if 'software developer' in query_lower or ('software' in query_lower and 'developer' in query_lower):
                 search_terms.add('sde')
@@ -935,204 +979,48 @@ Would you like me to help you with career planning strategies or skill developme
                 search_terms.add('sde')
             if 'software' in query_lower:
                 search_terms.add('sde')
-            
+
             print(f"[DEBUG] Search terms: {list(search_terms)}")
 
             # Search for roles in database
-            roles = []
+            matching_roles = []
             for term in search_terms:
                 found_roles = self.db_manager.search_job_roles(term)
-                roles.extend(found_roles)
+                matching_roles.extend(found_roles)
                 print(f"[DEBUG] Term '{term}' found {len(found_roles)} roles")
 
             # Remove duplicates
             unique_roles = []
             seen_ids = set()
-            for role in roles:
+            for role in matching_roles:
                 role_id = role.get('id')
                 if role_id not in seen_ids:
                     unique_roles.append(role)
                     seen_ids.add(role_id)
 
-            print(f"[DEBUG] Total unique roles found: {len(unique_roles)}")
-
             if unique_roles:
-                # Return comprehensive information for the best matching role
-                role = unique_roles[0]
-                role_title = role.get('title', 'Role')
-                print(f"[DEBUG] Using role: {role_title}")
+                # Score and rank roles based on relevance to the query
+                scored_roles = self._score_roles_by_relevance(query, unique_roles)
+                selected_role = scored_roles[0]['role']
+                print(f"[DEBUG] Using role: {selected_role['title']} (relevance score: {scored_roles[0]['score']:.2f})")
 
-                # Check if we have proper data or just placeholder data
-                description = role.get('description', '')
-                skills = role.get('skills_required', '')
-                
-                # If we have placeholder data, provide comprehensive information
-                if description == 'string' or not description or len(description) < 50:
-                    print(f"[DEBUG] Found placeholder data for {role_title}, using comprehensive information")
-                    
-                    if 'sde' in role_title.lower() or 'software' in role_title.lower() or 'developer' in role_title.lower():
-                        description = """Software Development Engineers (SDEs) are responsible for designing, developing, testing, and maintaining software applications and systems. They work collaboratively in cross-functional teams to build scalable, efficient, and user-friendly software solutions."""
-                        skills = "Programming languages (Java, Python, C++, JavaScript), Software design patterns, Data structures and algorithms, Version control (Git), Database management, Web development frameworks, Problem-solving, Debugging, Testing methodologies, Agile development"
-                    
-                    elif 'cashier' in role_title.lower():
-                        description = """Cashiers are responsible for processing customer transactions, handling payments, providing excellent customer service, and maintaining accurate records of sales. They serve as the final point of contact in the customer purchase journey."""
-                        skills = "Cash handling, Customer service, Point-of-sale systems, Basic math, Communication, Attention to detail, Problem resolution, Multi-tasking, Inventory awareness, Professional demeanor"
-                    
-                    elif 'analyst' in role_title.lower():
-                        description = """Data Analysts collect, process, and analyze data to help organizations make informed business decisions. They identify trends, create reports, and provide actionable insights from complex datasets."""
-                        skills = "Data analysis, SQL, Excel, Python/R, Statistical analysis, Data visualization (Tableau, Power BI), Critical thinking, Business intelligence, Report writing, Database management"
+                response = self._generate_role_specific_response(query, selected_role)
+                print(f"[DEBUG] Found database response for query")
 
-                response = f"""**{role_title} - Complete Role Information**
-
-**Department:** {role.get('department', 'Not specified')}
-**Level:** {role.get('level', 'Not specified')}
-**Required Skills:** {skills}
-
-**Role Description:**
-{description}
-
-**Career Development Information:**
-
-**Career Progression Path:**"""
-
-                # Add role-specific career progression
-                if 'software' in role_title.lower() or 'developer' in role_title.lower() or 'sde' in role_title.lower():
-                    response += """
-1. **Junior/Entry Level** → Software Developer I (0-2 years)
-2. **Mid-Level** → Software Developer II/Senior Developer (2-5 years)
-3. **Senior Level** → Senior Software Engineer/Tech Lead (5-8 years)
-4. **Leadership Track** → Engineering Manager → Director → VP Engineering
-5. **Technical Track** → Staff Engineer → Principal Engineer → Distinguished Engineer
-
-**Future of Software Development:**
-- **AI Integration:** Increased use of AI tools for code generation and debugging
-- **Cloud-Native Development:** Focus on microservices and containerization
-- **Low-Code/No-Code Platforms:** Rising demand for visual development tools
-- **Cybersecurity Integration:** Security-first development practices
-- **Edge Computing:** Development for IoT and edge devices
-- **Quantum Computing:** Emerging opportunities in quantum algorithms"""
-
-                elif 'data analyst' in role_title.lower() or 'analyst' in role_title.lower():
-                    response += """
-1. **Entry Level** → Junior Data Analyst (0-2 years)
-2. **Mid-Level** → Data Analyst (2-4 years)  
-3. **Senior Level** → Senior Data Analyst (4-6 years)
-4. **Specialization** → Business Analyst, Data Scientist, Analytics Manager
-5. **Leadership** → Analytics Team Lead → Director of Analytics
-
-**Future of Data Analysis:**
-- **Advanced Analytics Tools:** AI-powered dashboards and automated insights
-- **Self-Service Analytics:** Democratization of data analysis across organizations
-- **Real-time Analytics:** Stream processing and instant decision making
-- **Predictive Analytics:** Forecasting and trend analysis
-- **Data Storytelling:** Visual communication of insights to stakeholders"""
-
-                elif 'data scientist' in role_title.lower():
-                    response += """
-1. **Entry Level** → Junior Data Scientist (0-2 years)
-2. **Mid-Level** → Data Scientist (2-4 years)
-3. **Senior Level** → Senior Data Scientist (4-7 years)
-4. **Specialization** → ML Engineer, Research Scientist, Data Engineering
-5. **Leadership** → Principal Data Scientist → Director of Data Science
-
-**Future of Data Science:**
-- **MLOps and Model Deployment:** Focus on production-ready ML systems
-- **Automated ML (AutoML):** Tools for automated model selection and tuning
-- **Explainable AI:** Increasing demand for interpretable models
-- **Real-time Analytics:** Stream processing and real-time decision making
-- **Privacy-Preserving ML:** Federated learning and differential privacy"""
-
-                elif 'cashier' in role_title.lower():
-                    response += """
-1. **Entry Level** → Cashier/Sales Associate (0-1 year)
-2. **Mid-Level** → Senior Cashier/Customer Service Lead (1-3 years)
-3. **Supervisor Level** → Shift Supervisor/Team Lead (2-4 years)
-4. **Management** → Assistant Manager → Store Manager
-5. **Corporate** → Regional Manager → District Manager
-
-**Future of Retail/Cashier Roles:**
-- **Technology Integration:** Self-checkout systems and mobile payment solutions
-- **Customer Experience Focus:** Enhanced service delivery and problem resolution
-- **Data Analytics:** Understanding customer patterns and preferences
-- **Omnichannel Retail:** Integration of online and offline shopping experiences
-- **Loss Prevention:** Advanced security and inventory management"""
-
-                elif 'product manager' in role_title.lower():
-                    response += """
-1. **Entry Level** → Associate Product Manager (0-2 years)
-2. **Mid-Level** → Product Manager (2-5 years)
-3. **Senior Level** → Senior Product Manager (5-8 years)
-4. **Leadership** → Group PM → Director → VP Product → CPO
-
-**Future of Product Management:**
-- **Data-Driven Decision Making:** Advanced analytics for product insights
-- **User Experience Focus:** Integration with UX/UI design processes
-- **AI-Powered Products:** Building products with embedded AI capabilities
-- **Cross-Platform Strategy:** Managing products across multiple platforms"""
-
-                else:
-                    response += """
-Career progression varies by department and specialization. Typical paths include:
-1. **Entry Level** → Junior/Associate roles
-2. **Mid-Level** → Standard professional roles
-3. **Senior Level** → Senior professional/specialist roles
-4. **Leadership** → Management → Director → VP levels"""
-
-                response += f"""
-
-**Skills Development Recommendations:**
-- Focus on developing the required skills listed above
-- Stay updated with industry trends and emerging technologies
-- Seek mentorship from senior professionals in this field
-- Consider relevant certifications and continuous learning
-
-**Career Transition Opportunities:**
-Would you like to know about transitioning FROM or TO {role_title}? I can provide specific guidance on:
-- Skills needed for career transitions
-- Timeline and steps for role changes  
-- Related roles you might consider
-
-**Available Mentors in Our Organization:**"""
-
-                # Add mentor information
-                try:
-                    mentors = self.db_manager.get_mentors()
-                    relevant_mentors = [m for m in mentors if any(keyword in m.get('current_role', '').lower() 
-                                      for keyword in role_title.lower().split())]
-
-                    if relevant_mentors:
-                        for mentor in relevant_mentors[:2]:  # Show top 2 relevant mentors
-                            response += f"""
-- **{mentor.get('name')}** - {mentor.get('current_role')}
-  Expertise: {mentor.get('expertise', 'N/A')}
-  Contact: {mentor.get('contact_info', 'N/A')}"""
-                    else:
-                        response += """
-No specific mentors found for this role in our current database."""
-                except:
-                    response += """
-Mentor information currently unavailable."""
-
-                response += """
-
-**Next Steps:**
-1. Review the required skills and assess your current capabilities
-2. Create a development plan for any skill gaps
-3. Connect with mentors or professionals in this field
-4. Consider relevant training or certification programs
-5. Look for stretch assignments or projects related to this role
-
-Ask me specific questions like:
-- "How to switch from [current role] to [target role]?"
-- "What skills do I need for [role]?"
-- "Career path for [specific role]?"
-- "Future prospects in [field]?" """
+                # Save to chat history
+                self.db_manager.save_chat_history(
+                    user_id=user_id,
+                    query=query,
+                    response=response,
+                    role_context=selected_role['title']
+                )
 
                 return response
 
             return None
 
         except Exception as e:
+            print(f"[DEBUG] Error in _get_database_role_info: {e}")
             return None
 
     def get_similar_roles(self, query: str, k: int = 5) -> List[Dict]:
@@ -1166,12 +1054,12 @@ Ask me specific questions like:
         """Create a response from relevant documents when LLM is not available"""
         if not relevant_docs:
             return self._enhanced_fallback_response(query)
-        
+
         # Extract information from the most relevant document
         best_doc = relevant_docs[0]
         content = best_doc.page_content
         metadata = best_doc.metadata
-        
+
         # Try to extract role title from metadata or content
         role_title = metadata.get('title', 'Role')
         if not role_title or role_title == 'Role':
@@ -1181,20 +1069,20 @@ Ask me specific questions like:
                 if line.startswith('Job Role:') or line.startswith('Position:'):
                     role_title = line.split(':', 1)[1].strip()
                     break
-        
+
         # Create a comprehensive response based on the document content
         response = f"**{role_title}**\n\n"
-        
+
         # Extract key sections from content
         lines = content.split('\n')
         current_section = ""
         sections = {}
-        
+
         for line in lines:
             line = line.strip()
             if not line:
                 continue
-                
+
             if line.startswith('Role Description:'):
                 current_section = "description"
                 continue
@@ -1207,29 +1095,29 @@ Ask me specific questions like:
             elif line.startswith('Department:'):
                 current_section = "department"
                 continue
-            
+
             if current_section and not line.startswith(('Job Role:', 'Position:', 'Role Title:')):
                 if current_section not in sections:
                     sections[current_section] = []
                 sections[current_section].append(line)
-        
+
         # Build response from sections
         if 'description' in sections:
             response += "**Description:**\n"
             response += '\n'.join(sections['description'][:3])  # First 3 lines
             response += "\n\n"
-        
+
         if 'skills' in sections:
             response += "**Required Skills:**\n"
             response += '\n'.join(sections['skills'][:5])  # First 5 lines
             response += "\n\n"
-        
+
         if 'department' in sections:
             response += f"**Department:** {' '.join(sections['department'])}\n\n"
-        
+
         if 'level' in sections:
             response += f"**Level:** {' '.join(sections['level'])}\n\n"
-        
+
         # Add transition guidance if the query is about transitions
         query_lower = query.lower()
         if any(word in query_lower for word in ['switch', 'transition', 'change', 'move']):
@@ -1239,50 +1127,50 @@ Ask me specific questions like:
             response += "- Consider relevant training or certification programs\n"
             response += "- Connect with professionals currently in this role\n"
             response += "- Look for stretch assignments that align with this role\n\n"
-        
+
         response += "**Next Steps:**\n"
         response += "- Research more about this role within our organization\n"
         response += "- Connect with current employees in this position\n"
         response += "- Assess your skills against the requirements\n"
         response += "- Consider relevant training opportunities\n"
-        
+
         return response
 
     def _extract_key_terms(self, query: str) -> List[str]:
         """Extract key terms from query for broader search"""
         query_lower = query.lower()
         key_terms = []
-        
+
         # Common role-related terms
         role_terms = [
             'software developer', 'software engineer', 'developer', 'programmer',
             'cashier', 'retail', 'data scientist', 'data analyst', 'product manager',
             'marketing', 'sales', 'hr', 'human resources', 'finance', 'analyst'
         ]
-        
+
         for term in role_terms:
             if term in query_lower:
                 key_terms.append(term)
-        
+
         # Add individual words that might be relevant
         words = query_lower.split()
         relevant_words = [w for w in words if len(w) > 3 and w not in ['what', 'how', 'from', 'to', 'the', 'and', 'or']]
         key_terms.extend(relevant_words[:3])  # Limit to avoid too broad search
-        
+
         return key_terms
 
     def _enhance_query_context(self, query: str) -> str:
         """Enhance query with additional context for better retrieval"""
         query_lower = query.lower()
-        
+
         # If it's a transition query, make it more explicit
         if any(phrase in query_lower for phrase in ['switch from', 'transition from', 'change from', 'move from']):
             return f"{query} Please provide detailed information about both roles including skills, responsibilities, and career path guidance."
-        
+
         # If asking about a specific role, request comprehensive info
         if any(phrase in query_lower for phrase in ['what is', 'tell me about', 'describe']):
             return f"{query} Please provide comprehensive information including responsibilities, skills, career progression, and related roles."
-        
+
         return query
 
     def _enhance_response_with_db_info(self, query: str, original_response: str) -> str:
@@ -1292,16 +1180,16 @@ Ask me specific questions like:
             db_info = self._get_database_role_info(query)
             if db_info:
                 return db_info
-            
+
             # If it's a transition query, use the specialized handler
             query_lower = query.lower()
             if any(phrase in query_lower for phrase in ['switch', 'transition', 'change', 'move']):
                 transition_response = self._handle_career_transition(query_lower)
                 if len(transition_response.split()) > len(original_response.split()):
                     return transition_response
-            
+
             return original_response
-            
+
         except Exception as e:
             return original_response
 
@@ -1312,15 +1200,15 @@ Ask me specific questions like:
             db_response = self._get_database_role_info(query)
             if db_response:
                 return db_response
-            
+
             # Then try the career transition handler
             query_lower = query.lower()
             if any(phrase in query_lower for phrase in ['switch', 'transition', 'change', 'move', 'from', 'to']):
                 return self._handle_career_transition(query_lower)
-            
+
             # Finally, use the standard fallback
             return self._fallback_response(query)
-            
+
         except Exception as e:
             return self._fallback_response(query)
 
@@ -1330,17 +1218,17 @@ Ask me specific questions like:
             print("[DEBUG] Starting vector store refresh...")
             roles = self.db_manager.get_job_roles()
             print(f"[DEBUG] Found {len(roles)} roles in database")
-            
+
             if roles:
                 # Clear existing vector store to ensure fresh data
                 self.vectorstore = None
                 print("[DEBUG] Cleared existing vector store")
-                
+
                 success = self.process_documents(roles)
                 if success:
                     print(f"[DEBUG] Successfully processed {len(roles)} roles")
                     st.success(f"✅ Knowledge base updated successfully with {len(roles)} roles!")
-                    
+
                     # Test the vector store
                     if self.vectorstore:
                         try:
@@ -1358,3 +1246,330 @@ Ask me specific questions like:
         except Exception as e:
             print(f"[DEBUG] Error in refresh_vectorstore: {e}")
             st.error(f"❌ Error refreshing knowledge base: {e}")
+
+    def _score_roles_by_relevance(self, query: str, roles: List[Dict]) -> List[Dict]:
+        """Score roles based on their relevance to the query"""
+        query_lower = query.lower()
+        scored_roles = []
+
+        for role in roles:
+            score = 0
+            title_lower = role['title'].lower()
+            dept_lower = role.get('department', '').lower()
+            desc_lower = role.get('description', '').lower()
+            skills_lower = role.get('skills_required', '').lower()
+
+            # Score based on title match (highest priority)
+            query_words = query_lower.split()
+            title_words = title_lower.split()
+
+            for q_word in query_words:
+                if q_word in title_lower:
+                    score += 10
+                    # Bonus if it's an exact word match
+                    if q_word in title_words:
+                        score += 5
+
+            # Score based on department match
+            for q_word in query_words:
+                if q_word in dept_lower:
+                    score += 8
+
+            # Score based on description relevance
+            for q_word in query_words:
+                if len(q_word) > 2 and q_word in desc_lower:
+                    score += 3
+
+            # Score based on skills match
+            for q_word in query_words:
+                if len(q_word) > 2 and q_word in skills_lower:
+                    score += 2
+
+            # Special handling for HR queries
+            if any(word in query_lower for word in ['hr', 'human resources']):
+                if any(word in title_lower for word in ['hr', 'human resources']):
+                    score += 20
+                elif any(word in dept_lower for word in ['hr', 'human resources']):
+                    score += 15
+
+            # Special handling for specific role queries
+            role_keywords = {
+                'product manager': ['product', 'manager', 'pm'],
+                'software engineer': ['software', 'engineer', 'developer', 'sde'],
+                'data scientist': ['data', 'scientist', 'analytics'],
+                'marketing': ['marketing', 'digital', 'content'],
+                'sales': ['sales', 'account', 'revenue'],
+                'finance': ['finance', 'financial', 'analyst']
+            }
+
+            for role_type, keywords in role_keywords.items():
+                if any(keyword in query_lower for keyword in keywords):
+                    if any(keyword in title_lower for keyword in keywords):
+                        score += 15
+
+            scored_roles.append({
+                'role': role,
+                'score': score
+            })
+
+        # Sort by score (descending)
+        scored_roles.sort(key=lambda x: x['score'], reverse=True)
+        return scored_roles
+
+    def _generate_role_specific_response(self, query: str, role: Dict) -> str:
+        """Generate a detailed response for a specific role, leveraging database info"""
+        role_title = role.get('title', 'Role')
+        description = role.get('description', '')
+        skills = role.get('skills_required', '')
+        department = role.get('department', 'Not specified')
+        level = role.get('level', 'Not specified')
+
+        # Use placeholder content if data is incomplete or generic
+        if not description or description == 'string' or len(description) < 50:
+            if 'sde' in role_title.lower() or 'software' in role_title.lower() or 'developer' in role_title.lower():
+                description = """Software Development Engineers (SDEs) are responsible for designing, developing, testing, and maintaining software applications and systems. They work collaboratively in cross-functional teams to build scalable, efficient, and user-friendly software solutions."""
+            elif 'cashier' in role_title.lower():
+                description = """Cashiers are responsible for processing customer transactions, handling payments, providing excellent customer service, and maintaining accurate records of sales. They serve as the final point of contact in the customer purchase journey."""
+            elif 'analyst' in role_title.lower():
+                description = """Data Analysts collect, process, and analyze data to help organizations make informed business decisions. They identify trends, create reports, and provide actionable insights from complex datasets."""
+            elif 'data scientist' in role_title.lower():
+                description = """Data Scientists use a combination of statistics, programming, and domain expertise to extract meaningful insights from data. They build predictive models and machine learning algorithms to solve complex business problems."""
+            elif 'product manager' in role_title.lower():
+                description = """Product Managers define product vision and strategy, guide development, and oversee the product lifecycle from conception to launch and beyond, ensuring alignment with market needs and business goals."""
+            elif 'marketing' in role_title.lower():
+                description = """Marketing professionals develop and execute strategies to promote products or services, build brand awareness, and drive customer engagement through various channels."""
+            elif 'sales' in role_title.lower():
+                description = """Sales professionals are responsible for generating revenue by identifying customer needs, presenting solutions, and closing deals. They build relationships and drive business growth."""
+            elif 'human resources' in role_title.lower() or 'hr' in role_title.lower():
+                description = """Human Resources (HR) professionals manage the employee lifecycle, from recruitment to retention, ensuring compliance with labor laws, managing employee relations, and shaping organizational culture."""
+
+        if not skills:
+            if 'sde' in role_title.lower() or 'software' in role_title.lower() or 'developer' in role_title.lower():
+                skills = "Programming languages (Java, Python, C++, JavaScript), Software design patterns, Data structures and algorithms, Version control (Git), Database management, Web development frameworks, Problem-solving, Debugging, Testing methodologies, Agile development"
+            elif 'cashier' in role_title.lower():
+                skills = "Cash handling, Customer service, Point-of-sale systems, Basic math, Communication, Attention to detail, Problem resolution, Multi-tasking, Inventory awareness, Professional demeanor"
+            elif 'analyst' in role_title.lower():
+                skills = "Data analysis, SQL, Excel, Python/R, Statistical analysis, Data visualization (Tableau, Power BI), Critical thinking, Business intelligence, Report writing, Database management"
+            elif 'data scientist' in role_title.lower():
+                skills = "Programming (Python, R, SQL), Statistics, Machine learning, Data modeling, Data visualization, Communication, Problem-solving"
+            elif 'product manager' in role_title.lower():
+                skills = "User research, Product strategy, Roadmapping, Data analysis, Market research, Cross-functional collaboration, Communication, Prioritization"
+            elif 'marketing' in role_title.lower():
+                skills = "Digital marketing, Content creation, SEO/SEM, Social media management, Analytics, Campaign management, Communication, Creativity"
+            elif 'sales' in role_title.lower():
+                skills = "Sales techniques, CRM software, Lead generation, Negotiation, Communication, Presentation skills, Prospecting, Closing deals"
+            elif 'human resources' in role_title.lower() or 'hr' in role_title.lower():
+                skills = "Recruitment, Employee relations, HRIS systems, Payroll, Benefits administration, Employment law, Communication, Conflict resolution"
+
+        response = f"""**{role_title} - Complete Role Information**
+
+**Department:** {department}
+**Level:** {level}
+**Required Skills:** {skills}
+
+**Role Description:**
+{description}
+
+**Career Development Information:**
+
+**Career Progression Path:**"""
+
+        # Add role-specific career progression and future outlook
+        if 'software' in role_title.lower() or 'developer' in role_title.lower() or 'sde' in role_title.lower():
+            response += """
+1. **Junior/Entry Level** → Software Developer I (0-2 years)
+2. **Mid-Level** → Software Developer II/Senior Developer (2-5 years)
+3. **Senior Level** → Senior Software Engineer/Tech Lead (5-8 years)
+4. **Leadership Track** → Engineering Manager → Director → VP Engineering
+5. **Technical Track** → Staff Engineer → Principal Engineer → Distinguished Engineer
+
+**Future of Software Development:**
+- **AI Integration:** Increased use of AI tools for code generation and debugging
+- **Cloud-Native Development:** Focus on microservices and containerization
+- **Low-Code/No-Code Platforms:** Rising demand for visual development tools
+- **Cybersecurity Integration:** Security-first development practices
+- **Edge Computing:** Development for IoT and edge devices
+- **Quantum Computing:** Emerging opportunities in quantum algorithms"""
+
+        elif 'data analyst' in role_title.lower() or 'analyst' in role_title.lower():
+            response += """
+1. **Entry Level** → Junior Data Analyst (0-2 years)
+2. **Mid-Level** → Data Analyst (2-4 years)
+3. **Senior Level** → Senior Data Analyst (4-6 years)
+4. **Specialization** → Business Analyst, Data Scientist, Analytics Manager
+5. **Leadership** → Analytics Team Lead → Director of Analytics
+
+**Future of Data Analysis:**
+- **Advanced Analytics Tools:** AI-powered dashboards and automated insights
+- **Self-Service Analytics:** Democratization of data analysis across organizations
+- **Real-time Analytics:** Stream processing and instant decision making
+- **Predictive Analytics:** Forecasting and trend analysis
+- **Data Storytelling:** Visual communication of insights to stakeholders"""
+
+        elif 'data scientist' in role_title.lower():
+            response += """
+1. **Entry Level** → Junior Data Scientist (0-2 years)
+2. **Mid-Level** → Data Scientist (2-4 years)
+3. **Senior Level** → Senior Data Scientist (4-7 years)
+4. **Specialization** → ML Engineer, Research Scientist, Data Engineering
+5. **Leadership** → Principal Data Scientist → Director of Data Science
+
+**Future of Data Science:**
+- **MLOps and Model Deployment:** Focus on production-ready ML systems
+- **Automated ML (AutoML):** Tools for automated model selection and tuning
+- **Explainable AI:** Increasing demand for interpretable models
+- **Real-time Analytics:** Stream processing and real-time decision making
+- **Privacy-Preserving ML:** Federated learning and differential privacy"""
+
+        elif 'cashier' in role_title.lower():
+            response += """
+1. **Entry Level** → Cashier/Sales Associate (0-1 year)
+2. **Mid-Level** → Senior Cashier/Customer Service Lead (1-3 years)
+3. **Supervisor Level** → Shift Supervisor/Team Lead (2-4 years)
+4. **Management** → Assistant Manager → Store Manager
+5. **Corporate** → Regional Manager → District Manager
+
+**Future of Retail/Cashier Roles:**
+- **Technology Integration:** Self-checkout systems and mobile payment solutions
+- **Customer Experience Focus:** Enhanced service delivery and problem resolution
+- **Data Analytics:** Understanding customer patterns and preferences
+- **Omnichannel Retail:** Integration of online and offline shopping experiences
+- **Loss Prevention:** Advanced security and inventory management"""
+
+        elif 'product manager' in role_title.lower():
+            response += """
+1. **Entry Level** → Associate Product Manager (0-2 years)
+2. **Mid-Level** → Product Manager (2-5 years)
+3. **Senior Level** → Senior Product Manager (5-8 years)
+4. **Leadership** → Group PM → Director → VP Product → CPO
+
+**Future of Product Management:**
+- **Data-Driven Decision Making:** Advanced analytics for product insights
+- **User Experience Focus:** Integration with UX/UI design processes
+- **AI-Powered Products:** Building products with embedded AI capabilities
+- **Cross-Platform Strategy:** Managing products across multiple platforms"""
+
+        elif "human resources" in query_lower or "hr" in query_lower:
+            if "future" in query_lower or "prospects" in query_lower or "scope" in query_lower:
+                response += """
+**Growing Importance of HR:**
+Human Resources is evolving from a support function to a strategic business partner. The field is experiencing significant growth and transformation.
+
+**Future Growth Areas:**
+1. **People Analytics & Data-Driven HR**: Using AI and analytics to make strategic workforce decisions
+2. **Employee Experience Design**: Creating holistic employee journeys and workplace experiences
+3. **Diversity, Equity & Inclusion (DEI)**: Leading organizational culture transformation
+4. **Remote Work Management**: Developing policies and practices for hybrid/remote workforces
+5. **HR Technology**: Implementing and managing HRIS, ATS, and other HR tech platforms
+6. **Talent Intelligence**: Strategic workforce planning and skills gap analysis
+
+**Career Growth Opportunities:**
+- **Entry Level**: HR Assistant → HR Coordinator → HR Generalist
+- **Mid Level**: HR Business Partner → HR Manager → Senior HR Manager
+- **Senior Level**: HR Director → VP of People → Chief People Officer (CPO)
+- **Specializations**: Talent Acquisition, Compensation & Benefits, Learning & Development, Employee Relations
+
+**Industry Demand:**
+- 7% projected job growth (faster than average)
+- High demand across all industries
+- Competitive salaries with growth potential
+- Opportunities for consulting and freelance work
+
+**Key Skills for the Future:**
+- HR Analytics and People Data
+- Change Management
+- Digital HR Tools & Platforms
+- Employment Law & Compliance
+- Strategic Business Thinking
+- Cross-cultural Communication
+
+**Salary Expectations:**
+- **Entry Level**: $45,000 - $65,000
+- **Mid Level**: $65,000 - $95,000
+- **Senior Level**: $95,000 - $150,000+
+- **Executive Level**: $150,000 - $300,000+
+
+The future of HR is bright with increasing recognition of human capital as a competitive advantage."""
+            else:
+                response += """
+**What is Human Resources?**
+HR professionals manage the employee lifecycle, from recruitment to retention. They ensure compliance with labor laws, manage employee relations, and drive organizational culture.
+
+**Key Responsibilities:**
+- Talent acquisition and recruitment
+- Employee onboarding and training
+- Performance management
+- Compensation and benefits administration
+- Employee relations and conflict resolution
+- Policy development and compliance
+
+**Essential Skills:**
+- People management and communication
+- Employment law knowledge
+- Data analysis and HR metrics
+- Conflict resolution
+- Strategic planning
+- HRIS systems proficiency
+
+**Career Path:**
+HR Assistant → HR Generalist → HR Manager → HR Director → CHRO"""
+
+        else:
+            response += """
+Career progression varies by department and specialization. Typical paths include:
+1. **Entry Level** → Junior/Associate roles
+2. **Mid-Level** → Standard professional roles
+3. **Senior Level** → Senior professional/specialist roles
+4. **Leadership** → Management → Director → VP levels"""
+
+        response += f"""
+
+**Skills Development Recommendations:**
+- Focus on developing the required skills listed above
+- Stay updated with industry trends and emerging technologies
+- Seek mentorship from senior professionals in this field
+- Consider relevant certifications and continuous learning
+
+**Career Transition Opportunities:**
+Would you like to know about transitioning FROM or TO {role_title}? I can provide specific guidance on:
+- Skills needed for career transitions
+- Timeline and steps for role changes
+- Related roles you might consider
+
+**Available Mentors in Our Organization:**"""
+
+        # Add mentor information
+        try:
+            mentors = self.db_manager.get_mentors()
+            relevant_mentors = [m for m in mentors if any(keyword in m.get('current_role', '').lower()
+                                      for keyword in role_title.lower().split())]
+
+            if relevant_mentors:
+                for mentor in relevant_mentors[:2]:  # Show top 2 relevant mentors
+                    response += f"""
+- **{mentor.get('name')}** - {mentor.get('current_role')}
+  Expertise: {mentor.get('expertise', 'N/A')}
+  Contact: {mentor.get('contact_info', 'N/A')}"""
+            else:
+                response += """
+No specific mentors found for this role in our current database."""
+        except:
+            response += """
+Mentor information currently unavailable."""
+
+        response += """
+
+**Next Steps:**
+1. Review the required skills and assess your current capabilities
+2. Create a development plan for any skill gaps
+3. Connect with mentors or professionals in this field
+4. Consider relevant training or certification programs
+5. Look for stretch assignments or projects related to this role
+
+Ask me specific questions like:
+- "How to switch from [current role] to [target role]?"
+- "What skills do I need for [role]?"
+- "Career path for [specific role]?"
+- "Future prospects in [field]?" """
+
+        return response
